@@ -3,12 +3,7 @@
   "name": "TabGo",
   "description": "Automatically group tabs and manage a whitelist",
   "version": "1.0",
-  "permissions": [
-    "tabs",
-    "storage",
-    "tabGroups",
-    "contextMenus"
-  ],
+  "permissions": ["tabs", "storage", "tabGroups", "contextMenus"],
   "background": {
     "service_worker": "background.js"
   },
@@ -22,7 +17,5 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "host_permissions": [
-    "*://*/*"
-  ]
+  "host_permissions": ["*://*/*"]
 }
