@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabGo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 120px;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h3 {
+            text-align: center;
+            color: #007BFF;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        .switch-label {
+            margin-left: 10px;
+            font-size: 1.2em;
+        }
+        .switch input {
+            display: none; /* 隐藏 input */
+        }
+        .slider {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background-color: #ccc;
+            border-radius: 34px;
+            cursor: pointer;
+            transition: 0.4s;
+            border: 2px solid #007BFF; /* 添加边框，使 slider 与整体风格匹配 */
+        }
+        .slider::before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.4s;
+        }
+        input:checked + .slider {
+            background-color: #007BFF;
+        }
+        input:checked + .slider::before {
+            transform: translateX(20px);
+        }
+        a {
+            display: block;
+            text-align: center;
+            padding: 10px;
+            text-decoration: none;
+            color: #007BFF;
+            border: 1px solid #007BFF;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        a:hover {
+            background-color: #007BFF;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h3>TabGo</h3>
+
+    <button id="quickGroupButton">快速分组</button>
+    <a href="options.html">管理白名单</a>
+    
+    <div class="switch">
+      <label class="switch">
+          <input type="checkbox" id="subdomainToggle">
+          <span class="slider"></span>
+      </label>
+      <span class="switch-label">子域名</span>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
