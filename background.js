@@ -22,10 +22,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-
 // 关闭事件
 chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
-  console.info("关闭监听");
   // 判断标签页是否是窗口关闭导致的
   if (!removeInfo.isWindowClosing) {
     // 调用 groupTabs 函数
@@ -33,12 +31,19 @@ chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
   }
 });
 
-// 监听 subdomainToggle 状态的变化
+// 监听 switch 状态的变化
 chrome.storage.onChanged.addListener(function (changes, namespace) {
   if (changes.subdomainEnabled) {
     const newValue = changes.subdomainEnabled.newValue;
     ungroupAllTabs();
     groupTabs();
+  }
+
+  if (changes.groupTop) {
+    const newValue = changes.groupTop.newValue;
+    if (newValue) {
+      reorderTabsAndGroups();
+    }
   }
 });
 
@@ -81,6 +86,22 @@ function getSubdomainEnabled() {
           result.subdomainEnabled !== undefined
             ? result.subdomainEnabled
             : false;
+        resolve(isEnabled);
+      }
+    });
+  });
+}
+
+function getGroupTop() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["groupTop"], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(`Error getting groupTop: ${chrome.runtime.lastError}`)
+        );
+      } else {
+        const isEnabled =
+          result.groupTop !== undefined ? result.groupTop : false;
         resolve(isEnabled);
       }
     });
@@ -179,16 +200,25 @@ async function groupTabs() {
             // 检查是否已有分组存在
             if (existingGroups[groupName]) {
               // 如果分组已存在，直接将标签页移动到该分组
-              chrome.tabs.group({ tabIds: tabIds, groupId: existingGroups[groupName] }, () => {
-                if (chrome.runtime.lastError) {
-                  console.error("Failed to move tabs to existing group:", chrome.runtime.lastError);
+              chrome.tabs.group(
+                { tabIds: tabIds, groupId: existingGroups[groupName] },
+                () => {
+                  if (chrome.runtime.lastError) {
+                    console.error(
+                      "Failed to move tabs to existing group:",
+                      chrome.runtime.lastError
+                    );
+                  }
                 }
-              });
+              );
             } else {
               // 否则创建新分组
               chrome.tabs.group({ tabIds: tabIds }, (groupId) => {
                 if (chrome.runtime.lastError) {
-                  console.error("Failed to group tabs:", chrome.runtime.lastError);
+                  console.error(
+                    "Failed to group tabs:",
+                    chrome.runtime.lastError
+                  );
                   return;
                 }
 
@@ -197,19 +227,35 @@ async function groupTabs() {
 
                 // 更新分组的标题，只在新建时设置
                 if (groupId) {
-                  chrome.tabGroups.update(groupId, { title: groupTitle }, () => {
-                    if (chrome.runtime.lastError) {
-                      console.error(
-                        "Failed to update tab group title:",
-                        chrome.runtime.lastError
-                      );
+                  chrome.tabGroups.update(
+                    groupId,
+                    { title: groupTitle },
+                    () => {
+                      if (chrome.runtime.lastError) {
+                        console.error(
+                          "Failed to update tab group title:",
+                          chrome.runtime.lastError
+                        );
+                      }
                     }
-                  });
+                  );
                 } else {
                   console.error("Invalid groupId");
                 }
               });
             }
+          } else {
+            // 把当前标签页移动到分组外面
+
+            const tabId = groupTabs[0].id;
+            chrome.tabs.ungroup(tabId, () => {
+              if (chrome.runtime.lastError) {
+                console.error(
+                  "Failed to ungroup tab:",
+                  chrome.runtime.lastError
+                );
+              }
+            });
           }
         });
 
@@ -229,8 +275,12 @@ async function groupTabs() {
       });
     });
   });
-}
 
+  let groupTop = await  getGroupTop();
+  if(groupTop){
+    reorderTabsAndGroups();
+  }
+}
 
 function ungroupAllTabs() {
   // 获取当前窗口中的所有标签页
@@ -251,5 +301,80 @@ function ungroupAllTabs() {
         });
       }
     });
+  });
+}
+
+function reorderTabsAndGroups() {
+  chrome.windows.getCurrent({ populate: true }, function (currentWindow) {
+    chrome.tabGroups.query(
+      { windowId: currentWindow.id },
+      function (allGroups) {
+        let groupPromises = [];
+        let ungroupedTabs = [];
+        let currentIndex = 0;
+
+        // 首先移动所有的标签组
+        allGroups.sort((a, b) => a.id - b.id);
+        allGroups.forEach((group) => {
+          groupPromises.push(
+            new Promise((resolve) => {
+              chrome.tabGroups.move(
+                group.id,
+                { index: currentIndex },
+                function () {
+                  if (chrome.runtime.lastError) {
+                    console.error(
+                      "Error moving group:",
+                      chrome.runtime.lastError
+                    );
+                  }
+                  chrome.tabs.query(
+                    { groupId: group.id },
+                    function (groupTabs) {
+                      currentIndex += groupTabs.length;
+                      resolve();
+                    }
+                  );
+                }
+              );
+            })
+          );
+        });
+
+        // 等待所有组移动完成
+        Promise.all(groupPromises).then(() => {
+          // 找出所有未分组的标签
+          chrome.tabs.query(
+            {
+              windowId: currentWindow.id,
+              groupId: chrome.tabGroups.TAB_GROUP_ID_NONE,
+            },
+            function (tabs) {
+              ungroupedTabs = tabs;
+
+              // 移动未分组的标签到末尾
+              let movePromises = ungroupedTabs.map(
+                (tab) =>
+                  new Promise((resolve) => {
+                    chrome.tabs.move(tab.id, { index: -1 }, function () {
+                      if (chrome.runtime.lastError) {
+                        console.error(
+                          "Error moving ungrouped tab:",
+                          chrome.runtime.lastError
+                        );
+                      }
+                      resolve();
+                    });
+                  })
+              );
+
+              Promise.all(movePromises).then(() => {
+                console.log("Tabs and groups reordered successfully");
+              });
+            }
+          );
+        });
+      }
+    );
   });
 }

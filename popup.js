@@ -20,3 +20,24 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 });
+
+
+
+document.addEventListener("DOMContentLoaded", function () {
+  const toggle = document.getElementById("groupTop");
+
+  // 从 chrome.storage.local 中读取开关状态
+  chrome.storage.local.get(["groupTop"], function (result) {
+    if (result.groupTop !== undefined) {
+      toggle.checked = result.groupTop; // 根据存储的值设置 toggle 的初始状态
+    }
+  });
+
+  // 当 toggle 开关状态改变时，将新状态写入 chrome.storage.local
+  toggle.addEventListener("change", function () {
+    const isEnabled = toggle.checked; // 获取当前开关状态
+    chrome.storage.local.set({ groupTop: isEnabled }, function () {
+      //  console.log('Subdomain toggle state saved:', isEnabled);
+    });
+  });
+});
