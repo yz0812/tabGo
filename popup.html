@@ -5,87 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TabGo</title>
     <style>
+      :root {
+        --primary-color: #4a90e2;
+        --secondary-color: #f5f7fa;
+        --text-color: #333;
+        --border-radius: 8px;
+        --transition: all 0.3s ease;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        width: 120px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        width: 200px;
         margin: 0;
         padding: 20px;
-        background-color: #f4f4f4;
-        color: #333;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: var(--border-radius);
       }
+
       h3 {
         text-align: center;
-        color: #007bff;
+        color: var(--primary-color);
+        font-size: 24px;
+        margin-bottom: 20px;
       }
-      button {
+
+      button, a {
         width: 100%;
-        padding: 10px;
+        padding: 12px;
         margin: 10px 0;
-        background-color: #007bff;
+        background-color: var(--primary-color);
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: var(--border-radius);
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: var(--transition);
+        font-size: 14px;
+        font-weight: bold;
+        text-align: center;
+        text-decoration: none;
+        display: block;
+        box-sizing: border-box;
       }
-      button:hover {
-        background-color: #0056b3;
+
+      button:hover, a:hover {
+        background-color: #3a7bc8;
+        transform: translateY(-2px);
       }
+
       .switch {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin: 10px 0;
+        margin: 15px 0;
       }
+
       .switch-label {
-        margin-left: 10px;
-        font-size: 1.2em;
+        font-size: 14px;
+        color: var(--text-color);
       }
+
       .switch input {
-        display: none; /* 隐藏 input */
+        display: none;
       }
+
       .slider {
         position: relative;
-        width: 40px;
-        height: 20px;
+        width: 50px;
+        height: 24px;
         background-color: #ccc;
         border-radius: 34px;
         cursor: pointer;
-        transition: 0.4s;
-        border: 2px solid #007bff; /* 添加边框，使 slider 与整体风格匹配 */
+        transition: var(--transition);
       }
+
       .slider::before {
         position: absolute;
         content: "";
-        height: 16px;
-        width: 16px;
+        height: 20px;
+        width: 20px;
         left: 2px;
         bottom: 2px;
         background-color: white;
         border-radius: 50%;
-        transition: 0.4s;
+        transition: var(--transition);
       }
+
       input:checked + .slider {
-        background-color: #007bff;
+        background-color: var(--primary-color);
       }
+
       input:checked + .slider::before {
-        transform: translateX(20px);
+        transform: translateX(26px);
       }
+
       a {
-        display: block;
-        text-align: center;
-        padding: 10px;
-        text-decoration: none;
-        color: #007bff;
-        border: 1px solid #007bff;
-        border-radius: 5px;
-        margin-top: 10px;
-        transition: background-color 0.3s, color 0.3s;
+        background-color: transparent;
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
       }
+
       a:hover {
-        background-color: #007bff;
+        background-color: var(--primary-color);
         color: white;
       }
     </style>
@@ -104,12 +126,12 @@
       <span class="switch-label">子域名</span>
     </div>
     <div class="switch">
-        <label class="switch">
-          <input type="checkbox" id="groupTop" />
-          <span class="slider"></span>
-        </label>
-        <span class="switch-label">分组在前</span>
-      </div>
+      <label class="switch">
+        <input type="checkbox" id="groupTop" />
+        <span class="slider"></span>
+      </label>
+      <span class="switch-label">分组在前</span>
+    </div>
     <script src="popup.js"></script>
   </body>
 </html>
