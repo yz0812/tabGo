@@ -172,9 +172,15 @@ async function groupTabs() {
               topLevelDomain = url.hostname;
             }
             // 如果域名在白名单中，跳过该标签页的分组
-            if (whitelist.includes(topLevelDomain)) {
+            // if (whitelist.includes(topLevelDomain)) {
+            //   return;
+            // }
+
+            // 模糊匹配
+            if (whitelist.some(domain => domain.includes(topLevelDomain))) {
               return;
             }
+            
 
             // 使用简化后的URL作为分组名称（例如：example.com）
             let groupName = topLevelDomain;
