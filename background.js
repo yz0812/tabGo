@@ -32,7 +32,6 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   // 获取更多关于新激活标签页的信息
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     // 这里可以添加您想在标签页切换时执行的任何操作
-    // 例如，如果您想在每次切换标签时都收起其他标签组，可以取消下面这行的注释
     collapseOtherTabGroups(tab).then(console.log).catch(console.error);
   });
 });
@@ -64,6 +63,34 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
   if (changes.groupNames) {
     groupTabs();
   }
+
+
+
+  function getActiveTab(callback) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      if (tabs.length > 0) {
+        let activeTab = tabs[0];
+        callback(activeTab);
+      } else {
+        callback(null);
+      }
+    });
+  }
+  
+  
+  if (changes.accordion) {
+    const newValue = changes.accordion.newValue;
+    if(newValue){
+      getActiveTab(function(activeTab) {
+        if (activeTab) {
+          collapseOtherTabGroups(activeTab)
+        }
+      });
+      
+    }else{
+    expandAllTabGroups();
+    }
+  } 
 });
 
 // 在background script中监听消息
@@ -421,6 +448,50 @@ function reorderTabsAndGroups() {
   });
 }
 
+// 忽略异常
+function moveTab(tabId, index) {
+  return new Promise((resolve) => {
+    try {
+      chrome.tabs.move(tabId, { index: index }, () => {
+        if (chrome.runtime.lastError) {
+          console.log(
+            `移动标签 ${tabId} 时出错: ${chrome.runtime.lastError.message}`
+          );
+        }
+        resolve(); // 无论成功与否都解析 Promise
+      });
+    } catch (error) {
+      console.log(`移动标签 ${tabId} 时捕获到异常:`, error);
+      resolve(); // 即使发生异常也解析 Promise
+    }
+  });
+}
+
+// 尝试激活标签：
+// function activateAndMoveTab(tabId, index) {
+//   return new Promise((resolve) => {
+//     chrome.tabs.update(tabId, { active: true }, () => {
+//       if (chrome.runtime.lastError) {
+//         console.log(`激活标签 ${tabId} 时出错: ${chrome.runtime.lastError.message}`);
+//         resolve(false);
+//         return;
+//       }
+
+//       // 等待一小段时间，确保标签被激活
+//       setTimeout(() => {
+//         chrome.tabs.move(tabId, { index: index }, () => {
+//           if (chrome.runtime.lastError) {
+//             console.log(`移动标签 ${tabId} 时出错: ${chrome.runtime.lastError.message}`);
+//             resolve(false);
+//           } else {
+//             resolve(true);
+//           }
+//         });
+//       }, 100); // 100ms 延迟，可根据需要调整
+//     });
+//   });
+// }
+
 async function setGroupName(domain, newGroupName) {
   // 与chrome storage同步
   chrome.storage.sync.get(["groupNames"], async function (result) {
@@ -445,11 +516,14 @@ function collapseTabGroup(groupId, retryCount = 0) {
     chrome.tabGroups.update(groupId, { collapsed: true }, () => {
       if (chrome.runtime.lastError) {
         console.warn(
-         // `尝试折叠标签组 ${groupId} 时出错:`,
+          // `尝试折叠标签组 ${groupId} 时出错:`,
           chrome.runtime.lastError.message
         );
-        if (retryCount < 5 &&
-          chrome.runtime.lastError.message.includes("Tabs cannot be edited right now")
+        if (
+          retryCount < 5 &&
+          chrome.runtime.lastError.message.includes(
+            "Tabs cannot be edited right now"
+          )
         ) {
           // 增加等待时间和重试次数
           setTimeout(() => {
@@ -491,6 +565,50 @@ async function collapseOtherTabGroups(currentTab) {
           //  console.error("折叠标签组时遇到错误:", error);
           ///  resolve("部分标签组可能未能成功折叠");
         });
+    });
+  });
+}
+//展开全部分组
+function expandAllTabGroups() {
+  return new Promise((resolve, reject) => {
+    chrome.windows.getCurrent({ populate: true }, (window) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(`获取当前窗口时出错: ${chrome.runtime.lastError.message}`)
+        );
+        return;
+      }
+
+      chrome.tabGroups.query({ windowId: window.id }, (groups) => {
+        if (chrome.runtime.lastError) {
+          reject(
+            new Error(`查询标签组时出错: ${chrome.runtime.lastError.message}`)
+          );
+          return;
+        }
+
+        const expandPromises = groups.map(
+          (group) =>
+            new Promise((resolveGroup) => {
+              chrome.tabGroups.update(group.id, { collapsed: false }, () => {
+                if (chrome.runtime.lastError) {
+                  console.warn(
+                    `展开标签组 ${group.id} 时出错: ${chrome.runtime.lastError.message}`
+                  );
+                }
+                resolveGroup();
+              });
+            })
+        );
+
+        Promise.all(expandPromises)
+          .then(() => {
+            resolve(`已尝试展开 ${groups.length} 个标签组`);
+          })
+          .catch((error) => {
+            reject(new Error(`展开标签组时发生错误: ${error.message}`));
+          });
+      });
     });
   });
 }
