@@ -7,6 +7,12 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   chrome.contextMenus.create({
+    id: "manageGroupName",
+    title: "设置分组名称",
+    contexts: ["all"],
+  });
+
+  chrome.contextMenus.create({
     id: "quickGroup",
     title: "快速分组",
     contexts: ["all"],
@@ -44,6 +50,10 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     if (newValue) {
       reorderTabsAndGroups();
     }
+  }
+
+  if (changes.groupNames) {
+    groupTabs();
   }
 });
 
@@ -126,6 +136,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     alert(`${domain} 已添加到白名单`);
   } else if (info.menuItemId === "quickGroup") {
     groupTabs();
+  } else if (info.menuItemId === "manageGroupName") {
+    // 向当前选项卡发送消息，弹出设置分组名称的 prompt
+    chrome.tabs.sendMessage(tab.id, { action: "promptForGroupName" }, (response) => {
+      if (response && response.groupName && response.domain) {
+        setGroupName(response.domain, response.groupName); // 设置分组名称
+      }
+    });
+    groupTabs();
   }
 });
 
@@ -134,158 +152,158 @@ async function groupTabs() {
 
   // 获取白名单
   getWhitelist(function (whitelist) {
-    chrome.tabs.query({}, function (tabs) {
-      let groups = {}; // 用于存储每个域名的标签ID
-      let existingGroups = {}; // 存储已经存在的分组ID
+    chrome.storage.sync.get(["groupNames"], function (groupResult) {
+      const groupNames = groupResult.groupNames || {};
 
-      // 获取已存在的标签分组
-      chrome.tabGroups.query({}, (tabGroups) => {
-        tabGroups.forEach((group) => {
-          // 使用分组标题作为键，存储已有分组的ID
-          if (group.title) {
-            existingGroups[group.title] = group.id;
-          }
-        });
+      chrome.tabs.query({}, function (tabs) {
+        let groups = {}; // 用于存储每个分组名称的标签
+        let existingGroups = {}; // 存储已经存在的分组ID
 
-        // 遍历所有标签页，根据域名分组
-        tabs.forEach((tab) => {
-          try {
-            const url = new URL(tab.url);
-
-            // 跳过 Chrome 内置页面，例如 chrome:// 和 about://
-            if (url.protocol === "chrome:" || url.protocol === "about:") {
-              return; // 跳过内置页面
+        // 获取已存在的标签分组
+        chrome.tabGroups.query({}, (tabGroups) => {
+          tabGroups.forEach((group) => {
+            // 使用分组标题作为键，存储已有分组的ID
+            if (group.title) {
+              existingGroups[group.title] = group.id;
             }
+          });
 
-            // 不开启子域名
-            // 提取一级域名进行白名单匹配
-            const domainParts = url.hostname.split(".");
-            let topLevelDomain = domainParts;
-            if (!localIsEnabled) {
-              topLevelDomain = domainParts.slice(-2).join("."); // 提取一级域名
+          // 遍历所有标签页，根据域名分组
+          tabs.forEach((tab) => {
+            try {
+              const url = new URL(tab.url);
+
+              // 跳过 Chrome 内置页面，例如 chrome:// 和 about://
+              if (url.protocol === "chrome:" || url.protocol === "about:") {
+                return; // 跳过内置页面
+              }
+
+              // 提取一级域名进行白名单匹配
+              const domainParts = url.hostname.split(".");
+              let topLevelDomain = domainParts;
+              if (!localIsEnabled) {
+                topLevelDomain = domainParts.slice(-2).join("."); // 提取一级域名
+              }
+
+              // 检查是否是 IP 地址
+              const ipRegex =
+                /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){2}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+              if (ipRegex.test(url.hostname)) {
+                topLevelDomain = url.hostname;
+              }
+
+              // 模糊匹配白名单
+              if (whitelist.some(domain => domain.includes(topLevelDomain))) {
+                return;
+              }
+
+              // 获取自定义分组名称
+              let groupName = groupNames[topLevelDomain] || topLevelDomain;
+
+              if (!groups[groupName]) {
+                groups[groupName] = [];
+              }
+
+              groups[groupName].push(tab);
+            } catch (e) {
+              console.error("Error parsing URL:", tab.url, e);
             }
+          });
 
-            // 检查是否是 IP 地址
-            const ipRegex =
-              /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){2}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-            if (ipRegex.test(url.hostname)) {
-              topLevelDomain = url.hostname;
-            }
-            // 如果域名在白名单中，跳过该标签页的分组
-            // if (whitelist.includes(topLevelDomain)) {
-            //   return;
-            // }
+          // 遍历每个分组的标签
+          Object.keys(groups).forEach((groupName) => {
+            const groupTabs = groups[groupName];
 
-            // 模糊匹配
-            if (whitelist.some(domain => domain.includes(topLevelDomain))) {
-              return;
-            }
-            
+            // 如果某个分组的标签页数量大于1才进行分组
+            if (groupTabs.length > 1) {
+              const tabIds = groupTabs.map((tab) => tab.id);
 
-            // 使用简化后的URL作为分组名称（例如：example.com）
-            let groupName = topLevelDomain;
-
-            if (!groups[groupName]) {
-              groups[groupName] = [];
-            }
-
-            groups[groupName].push(tab);
-          } catch (e) {
-            console.error("Error parsing URL:", tab.url, e);
-          }
-        });
-
-        // 遍历每个分组的标签
-        Object.keys(groups).forEach((groupName) => {
-          const groupTabs = groups[groupName];
-
-          // 如果某个分组的标签页数量大于1才进行分组
-          if (groupTabs.length > 1) {
-            const tabIds = groupTabs.map((tab) => tab.id);
-
-            // 检查是否已有分组存在
-            if (existingGroups[groupName]) {
-              // 如果分组已存在，直接将标签页移动到该分组
-              chrome.tabs.group(
-                { tabIds: tabIds, groupId: existingGroups[groupName] },
-                () => {
+              // 检查是否已有分组存在
+              if (existingGroups[groupName]) {
+                // 如果分组已存在，直接将标签页移动到该分组
+                chrome.tabs.group(
+                  { tabIds: tabIds, groupId: existingGroups[groupName] },
+                  () => {
+                    if (chrome.runtime.lastError) {
+                      console.error(
+                        "Failed to move tabs to existing group:",
+                        chrome.runtime.lastError
+                      );
+                    }
+                  }
+                );
+              } else {
+                // 否则创建新分组
+                chrome.tabs.group({ tabIds: tabIds }, (groupId) => {
                   if (chrome.runtime.lastError) {
                     console.error(
-                      "Failed to move tabs to existing group:",
+                      "Failed to group tabs:",
                       chrome.runtime.lastError
                     );
+                    return;
                   }
-                }
-              );
+
+                  // 确保分组标题不为空，并设置默认标题
+                  const finalGroupName = groupName || "新分组";
+
+                  // 更新分组的标题，只在新建时设置
+                  if (groupId) {
+                    chrome.tabGroups.update(
+                      groupId,
+                      { title: finalGroupName },
+                      () => {
+                        if (chrome.runtime.lastError) {
+                          console.error(
+                            "Failed to update tab group title:",
+                            chrome.runtime.lastError
+                          );
+                        }
+                      }
+                    );
+                  } else {
+                    console.error("Invalid groupId");
+                  }
+                });
+              }
             } else {
-              // 否则创建新分组
-              chrome.tabs.group({ tabIds: tabIds }, (groupId) => {
+              // 把当前标签页移动到分组外面
+              const tabId = groupTabs[0].id;
+              chrome.tabs.ungroup(tabId, () => {
                 if (chrome.runtime.lastError) {
                   console.error(
-                    "Failed to group tabs:",
+                    "Failed to ungroup tab:",
                     chrome.runtime.lastError
                   );
-                  return;
-                }
-
-                // 确保分组标题不为空，并设置默认标题
-                const groupTitle = groupName || "新分组";
-
-                // 更新分组的标题，只在新建时设置
-                if (groupId) {
-                  chrome.tabGroups.update(
-                    groupId,
-                    { title: groupTitle },
-                    () => {
-                      if (chrome.runtime.lastError) {
-                        console.error(
-                          "Failed to update tab group title:",
-                          chrome.runtime.lastError
-                        );
-                      }
-                    }
-                  );
-                } else {
-                  console.error("Invalid groupId");
                 }
               });
             }
-          } else {
-            // 把当前标签页移动到分组外面
+          });
 
-            const tabId = groupTabs[0].id;
-            chrome.tabs.ungroup(tabId, () => {
-              if (chrome.runtime.lastError) {
-                console.error(
-                  "Failed to ungroup tab:",
-                  chrome.runtime.lastError
-                );
-              }
-            });
-          }
-        });
-
-        // 移出只有一个标签页的分组
-        chrome.tabGroups.query({}, function (tabGroups) {
-          tabGroups.forEach((group) => {
-            chrome.tabs.query({ groupId: group.id }, function (groupTabs) {
-              if (groupTabs.length === 1) {
-                // 只有一个标签页，将该标签页移出分组
-                chrome.tabs.ungroup(groupTabs[0].id, function () {
-                  // console.log("Tab " + groupTabs[0].id + " has been ungrouped from a group with only one tab.");
-                });
-              }
+          // 移出只有一个标签页的分组
+          chrome.tabGroups.query({}, function (tabGroups) {
+            tabGroups.forEach((group) => {
+              chrome.tabs.query({ groupId: group.id }, function (groupTabs) {
+                if (groupTabs.length === 1) {
+                  // 只有一个标签页，将该标签页移出分组
+                  chrome.tabs.ungroup(groupTabs[0].id, function () {
+                    // 已移出分组
+                  });
+                }
+              });
             });
           });
+        });
+
+        // 如果启用了分组在前的功能，重新排序标签和分组
+        chrome.storage.local.get(["groupTop"], async function (result) {
+          const groupTop = result.groupTop || false;
+          if (groupTop) {
+            reorderTabsAndGroups();
+          }
         });
       });
     });
   });
-
-  let groupTop = await  getGroupTop();
-  if(groupTop){
-    reorderTabsAndGroups();
-  }
 }
 
 function ungroupAllTabs() {
@@ -382,5 +400,23 @@ function reorderTabsAndGroups() {
         });
       }
     );
+  });
+}
+
+async function setGroupName(domain, newGroupName) {
+  // 与chrome storage同步
+  chrome.storage.sync.get(["groupNames"], async function (result) {
+    const subdomainEnabled = await getSubdomainEnabled();
+    const groupNames = result.groupNames || {};
+    const domainParts = domain.split(".");
+
+    // 如果未启用子域名，则提取一级域名
+    let topLevelDomain = domainParts;
+    if (!subdomainEnabled) {
+      topLevelDomain = domainParts.slice(-2).join("."); // 提取一级域名
+    }
+
+    groupNames[topLevelDomain] = newGroupName;
+    chrome.storage.sync.set({ groupNames });
   });
 }
