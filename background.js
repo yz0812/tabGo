@@ -63,20 +63,6 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
   if (changes.groupNames) {
     groupTabs();
   }
-
-
-
-  function getActiveTab(callback) {
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-      if (tabs.length > 0) {
-        let activeTab = tabs[0];
-        callback(activeTab);
-      } else {
-        callback(null);
-      }
-    });
-  }
-  
   
   if (changes.accordion) {
     const newValue = changes.accordion.newValue;
@@ -90,8 +76,9 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     }else{
     expandAllTabGroups();
     }
-  } 
+  }
 });
+
 
 // 在background script中监听消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -351,6 +338,20 @@ async function groupTabs() {
   });
 }
 
+
+// 获取当前激活的tab
+function getActiveTab(callback) {
+  chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+    if (tabs.length > 0) {
+      let activeTab = tabs[0];
+      callback(activeTab);
+    } else {
+      callback(null);
+    }
+  });
+}
+
+//取消所有标签页的分组
 function ungroupAllTabs() {
   // 获取当前窗口中的所有标签页
   chrome.tabs.query({ currentWindow: true }, (tabs) => {
@@ -447,50 +448,6 @@ function reorderTabsAndGroups() {
     );
   });
 }
-
-// 忽略异常
-function moveTab(tabId, index) {
-  return new Promise((resolve) => {
-    try {
-      chrome.tabs.move(tabId, { index: index }, () => {
-        if (chrome.runtime.lastError) {
-          console.log(
-            `移动标签 ${tabId} 时出错: ${chrome.runtime.lastError.message}`
-          );
-        }
-        resolve(); // 无论成功与否都解析 Promise
-      });
-    } catch (error) {
-      console.log(`移动标签 ${tabId} 时捕获到异常:`, error);
-      resolve(); // 即使发生异常也解析 Promise
-    }
-  });
-}
-
-// 尝试激活标签：
-// function activateAndMoveTab(tabId, index) {
-//   return new Promise((resolve) => {
-//     chrome.tabs.update(tabId, { active: true }, () => {
-//       if (chrome.runtime.lastError) {
-//         console.log(`激活标签 ${tabId} 时出错: ${chrome.runtime.lastError.message}`);
-//         resolve(false);
-//         return;
-//       }
-
-//       // 等待一小段时间，确保标签被激活
-//       setTimeout(() => {
-//         chrome.tabs.move(tabId, { index: index }, () => {
-//           if (chrome.runtime.lastError) {
-//             console.log(`移动标签 ${tabId} 时出错: ${chrome.runtime.lastError.message}`);
-//             resolve(false);
-//           } else {
-//             resolve(true);
-//           }
-//         });
-//       }, 100); // 100ms 延迟，可根据需要调整
-//     });
-//   });
-// }
 
 async function setGroupName(domain, newGroupName) {
   // 与chrome storage同步
