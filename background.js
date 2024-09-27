@@ -445,16 +445,12 @@ function collapseTabGroup(groupId, retryCount = 0) {
     chrome.tabGroups.update(groupId, { collapsed: true }, () => {
       if (chrome.runtime.lastError) {
         console.warn(
-          `尝试折叠标签组 ${groupId} 时出错:`,
+         // `尝试折叠标签组 ${groupId} 时出错:`,
           chrome.runtime.lastError.message
         );
-        if (
-          retryCount < 5 &&
-          chrome.runtime.lastError.message.includes(
-            "Tabs cannot be edited right now"
-          )
+        if (retryCount < 5 &&
+          chrome.runtime.lastError.message.includes("Tabs cannot be edited right now")
         ) {
-          console.warn(`1111`);
           // 增加等待时间和重试次数
           setTimeout(() => {
             resolve(collapseTabGroup(groupId, retryCount + 1));
