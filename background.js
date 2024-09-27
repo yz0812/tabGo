@@ -27,6 +27,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     groupTabs();
   }
 });
+// 监听标签页激活事件
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  // 获取更多关于新激活标签页的信息
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
+    // 这里可以添加您想在标签页切换时执行的任何操作
+    // 例如，如果您想在每次切换标签时都收起其他标签组，可以取消下面这行的注释
+    collapseOtherTabGroups(tab).then(console.log).catch(console.error);
+  });
+});
 
 // 关闭事件
 chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
@@ -72,16 +81,6 @@ function getWhitelist(callback) {
   });
 }
 
-// 读取 subdomainEnabled 的状态
-// function getSubdomainEnabled(callback) {
-//   // 从 chrome.storage.local 中读取 subdomainEnabled
-//   chrome.storage.local.get(['subdomainEnabled'], function(result) {
-//     // 如果存在 subdomainEnabled，则返回其值；否则返回 false 作为默认值
-//     const isEnabled = result.subdomainEnabled !== undefined ? result.subdomainEnabled : false;
-//     callback(isEnabled);
-//   });
-//}
-
 function getSubdomainEnabled() {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(["subdomainEnabled"], function (result) {
@@ -118,6 +117,21 @@ function getGroupTop() {
   });
 }
 
+function getAccordionEnabled() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["accordion"], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(`Error getting accordion: ${chrome.runtime.lastError}`)
+        );
+      } else {
+        const isEnabled =
+          result.accordion !== undefined ? result.accordion : false;
+        resolve(isEnabled);
+      }
+    });
+  });
+}
 function addToWhitelist(domain) {
   getWhitelist(function (whitelist) {
     if (!whitelist.includes(domain)) {
@@ -138,11 +152,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     groupTabs();
   } else if (info.menuItemId === "manageGroupName") {
     // 向当前选项卡发送消息，弹出设置分组名称的 prompt
-    chrome.tabs.sendMessage(tab.id, { action: "promptForGroupName" }, (response) => {
-      if (response && response.groupName && response.domain) {
-        setGroupName(response.domain, response.groupName); // 设置分组名称
+    chrome.tabs.sendMessage(
+      tab.id,
+      { action: "promptForGroupName" },
+      (response) => {
+        if (response && response.groupName && response.domain) {
+          setGroupName(response.domain, response.groupName); // 设置分组名称
+        }
       }
-    });
+    );
     groupTabs();
   }
 });
@@ -193,7 +211,7 @@ async function groupTabs() {
               }
 
               // 模糊匹配白名单
-              if (whitelist.some(domain => domain.includes(topLevelDomain))) {
+              if (whitelist.some((domain) => domain.includes(topLevelDomain))) {
                 return;
               }
 
@@ -327,7 +345,7 @@ function ungroupAllTabs() {
     });
   });
 }
-
+// 重新排序
 function reorderTabsAndGroups() {
   chrome.windows.getCurrent({ populate: true }, function (currentWindow) {
     chrome.tabGroups.query(
@@ -418,5 +436,65 @@ async function setGroupName(domain, newGroupName) {
 
     groupNames[topLevelDomain] = newGroupName;
     chrome.storage.sync.set({ groupNames });
+  });
+}
+
+// 手风琴模式
+function collapseTabGroup(groupId, retryCount = 0) {
+  return new Promise((resolve, reject) => {
+    chrome.tabGroups.update(groupId, { collapsed: true }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn(
+          `尝试折叠标签组 ${groupId} 时出错:`,
+          chrome.runtime.lastError.message
+        );
+        if (
+          retryCount < 5 &&
+          chrome.runtime.lastError.message.includes(
+            "Tabs cannot be edited right now"
+          )
+        ) {
+          console.warn(`1111`);
+          // 增加等待时间和重试次数
+          setTimeout(() => {
+            resolve(collapseTabGroup(groupId, retryCount + 1));
+          }, 100 * (retryCount + 1)); // 逐渐增加等待时间
+        } else {
+          reject(chrome.runtime.lastError);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+async function collapseOtherTabGroups(currentTab) {
+  // 是否开启手风琴模式
+  let accordionEnabled = await getAccordionEnabled();
+  if (!accordionEnabled) {
+    return;
+  }
+  return new Promise((resolve, reject) => {
+    const currentWindowId = currentTab.windowId;
+    const currentTabGroupId = currentTab.groupId;
+
+    chrome.tabGroups.query({ windowId: currentWindowId }, (groups) => {
+      const collapsePromises = groups.map((group) => {
+        if (group.id !== currentTabGroupId && !group.collapsed) {
+          return collapseTabGroup(group.id);
+        }
+        return Promise.resolve();
+      });
+
+      Promise.all(collapsePromises)
+        .then(() => {
+          //   resolve("所有其他未折叠的标签组已尝试收起")
+        })
+        .catch((error) => {
+          //  console.error("折叠标签组时遇到错误:", error);
+          ///  resolve("部分标签组可能未能成功折叠");
+        });
+    });
   });
 }
