@@ -126,7 +126,7 @@ function whitelist(callback) {
 function getGroupNames() {
 
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get(["groupNames"], function (result) {
+    chrome.storage.sync.get(["groupNames"], function (result) {
       if (chrome.runtime.lastError) {
         reject(
           new Error(
