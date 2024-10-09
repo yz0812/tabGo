@@ -99,10 +99,10 @@ function extensionReplace(newValue){
         extensionMap[ext.id] = ext.name;
       });
       // 存储到本地
-      chrome.storage.local.set({ extensionReplace: extensionMap });
+      chrome.storage.local.set({ extensionReplaceMap: extensionMap });
     });
   }else{
-    chrome.storage.local.remove('extensionReplace');
+    chrome.storage.local.remove('extensionReplaceMap');
   }
 }
 
@@ -188,6 +188,9 @@ function getSubdomainEnabled() {
   });
 }
 
+
+
+
 // 分组靠前
 function getGroupTop() {
   return new Promise((resolve, reject) => {
@@ -205,8 +208,7 @@ function getGroupTop() {
   });
 }
 
-
-// 或者名称替换
+// 扩展名称开启状态
 function getExtensionReplace() {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(["extensionReplace"], function (result) {
@@ -216,8 +218,25 @@ function getExtensionReplace() {
         );
       } else {
         const extensionReplace =
-          result.extensionReplace !== undefined ? result.extensionReplace : {};
+          result.extensionReplace !== undefined ? result.extensionReplace : false;
         resolve(extensionReplace);
+      }
+    });
+  });
+}
+
+// 扩展名称替换
+function getExtensionReplaceMap() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["extensionReplaceMap"], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(`Error getting extensionReplaceMap: ${chrome.runtime.lastError}`)
+        );
+      } else {
+        const extensionReplaceMap =
+          result.extensionReplaceMap !== undefined ? result.extensionReplaceMap : {};
+        resolve(extensionReplaceMap);
       }
     });
   });
@@ -284,6 +303,9 @@ async function groupTabs() {
   // 获取分组别名
   const groupNames = await getGroupNames();
   // 获取扩展名称分组
+  const extensionReplaceMap = await getExtensionReplaceMap();
+
+  // 扩展名称开启状态
   const extensionReplace = await getExtensionReplace();
 
       chrome.tabs.query({}, function (tabs) {
@@ -329,20 +351,24 @@ async function groupTabs() {
               }
 
 
-              let groupName = []
-              if(tab.url.startsWith('extension://')|| tab.url.startsWith('chrome-extension://')){
+              
+              let groupName =topLevelDomain;
+             
+              if(extensionReplace){
+                if(tab.url.startsWith('extension://')|| tab.url.startsWith('chrome-extension://')){
                   // 获取扩展名称分组
-                  groupName = extensionReplace[topLevelDomain] || topLevelDomain;
+                  groupName = extensionReplaceMap[topLevelDomain] || topLevelDomain;
+                }
               }else{
-                // 获取自定义分组名称
-                groupName = groupNames[topLevelDomain] || topLevelDomain;
+                   // 获取自定义分组名称
+                   groupName = groupNames[topLevelDomain] || topLevelDomain;
               }
+            
+
+
               if (!groups[groupName]) {
                 groups[groupName] = [];
               }
-
-      
-
               groups[groupName].push(tab);
             } catch (e) {
               console.error("Error parsing URL:", tab.url, e);
