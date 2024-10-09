@@ -77,7 +77,34 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     expandAllTabGroups();
     }
   }
+
+
+
+  if (changes.extensionReplace) {
+    extensionReplace(changes.extensionReplace.newValue);
+  }
 });
+
+
+
+
+// 扩展名称
+function extensionReplace(newValue){
+  if(newValue){
+    chrome.management.getAll(extensions => {
+      const extensionMap = {};
+      
+      // 生成映射
+      extensions.forEach(ext => {
+        extensionMap[ext.id] = ext.name;
+      });
+      // 存储到本地
+      chrome.storage.local.set({ extensionReplace: extensionMap });
+    });
+  }else{
+    chrome.storage.local.remove('extensionReplace');
+  }
+}
 
 
 // 在background script中监听消息
@@ -89,12 +116,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // 白名单存储和读取
-function getWhitelist(callback) {
+function whitelist(callback) {
   chrome.storage.sync.get(["whitelist"], function (result) {
     callback(result.whitelist || []);
   });
 }
 
+// 获取别名
+function getGroupNames() {
+
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["groupNames"], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Error getting groupNames: ${chrome.runtime.lastError}`
+          )
+        );
+      } else {
+        const groupNames =
+          result.groupNames !== undefined
+            ? result.groupNames
+            : {};
+        resolve(groupNames);
+      }
+    });
+  });
+}
+
+
+
+//获取白名单
+function getWhitelist() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["whitelist"], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Error getting whitelist: ${chrome.runtime.lastError}`
+          )
+        );
+      } else {
+        const whitelist =
+          result.whitelist !== undefined
+            ? result.whitelist
+            : [];
+        resolve(whitelist);
+      }
+    });
+  });
+}
+
+// 子域名分组
 function getSubdomainEnabled() {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(["subdomainEnabled"], function (result) {
@@ -115,6 +188,7 @@ function getSubdomainEnabled() {
   });
 }
 
+// 分组靠前
 function getGroupTop() {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(["groupTop"], function (result) {
@@ -131,6 +205,26 @@ function getGroupTop() {
   });
 }
 
+
+// 或者名称替换
+function getExtensionReplace() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["extensionReplace"], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(`Error getting extensionReplace: ${chrome.runtime.lastError}`)
+        );
+      } else {
+        const extensionReplace =
+          result.extensionReplace !== undefined ? result.extensionReplace : {};
+        resolve(extensionReplace);
+      }
+    });
+  });
+}
+
+
+// 别名
 function getAccordionEnabled() {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(["accordion"], function (result) {
@@ -146,8 +240,11 @@ function getAccordionEnabled() {
     });
   });
 }
+
+
+//白名单
 function addToWhitelist(domain) {
-  getWhitelist(function (whitelist) {
+  whitelist(function (whitelist) {
     if (!whitelist.includes(domain)) {
       whitelist.push(domain);
       chrome.storage.sync.set({ whitelist: whitelist });
@@ -180,12 +277,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 async function groupTabs() {
-  let localIsEnabled = await getSubdomainEnabled();
-
+  // 子域名分组
+  const localIsEnabled = await getSubdomainEnabled();
   // 获取白名单
-  getWhitelist(function (whitelist) {
-    chrome.storage.sync.get(["groupNames"], function (groupResult) {
-      const groupNames = groupResult.groupNames || {};
+  const whitelist = await getWhitelist();
+  // 获取分组别名
+  const groupNames = await getGroupNames();
+  // 获取扩展名称分组
+  const extensionReplace = await getExtensionReplace();
 
       chrome.tabs.query({}, function (tabs) {
         let groups = {}; // 用于存储每个分组名称的标签
@@ -229,12 +328,20 @@ async function groupTabs() {
                 return;
               }
 
-              // 获取自定义分组名称
-              let groupName = groupNames[topLevelDomain] || topLevelDomain;
 
+              let groupName = []
+              if(tab.url.startsWith('extension://')|| tab.url.startsWith('chrome-extension://')){
+                  // 获取扩展名称分组
+                  groupName = extensionReplace[topLevelDomain] || topLevelDomain;
+              }else{
+                // 获取自定义分组名称
+                groupName = groupNames[topLevelDomain] || topLevelDomain;
+              }
               if (!groups[groupName]) {
                 groups[groupName] = [];
               }
+
+      
 
               groups[groupName].push(tab);
             } catch (e) {
@@ -334,8 +441,6 @@ async function groupTabs() {
           }
         });
       });
-    });
-  });
 }
 
 
