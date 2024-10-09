@@ -351,18 +351,13 @@ async function groupTabs() {
               }
 
 
-              
-              let groupName =topLevelDomain;
-             
-              if(extensionReplace){
-                if(tab.url.startsWith('extension://')|| tab.url.startsWith('chrome-extension://')){
-                  // 获取扩展名称分组
-                  groupName = extensionReplaceMap[topLevelDomain] || topLevelDomain;
-                }
-              }else{
-                   // 获取自定义分组名称
-                   groupName = groupNames[topLevelDomain] || topLevelDomain;
+                      // 获取自定义分组名称
+              let groupName = groupNames[topLevelDomain] || topLevelDomain;
+// 获取扩展名称分组 
+              if (extensionReplace && (tab.url.startsWith('extension://') || tab.url.startsWith('chrome-extension://'))) {
+                groupName = extensionReplaceMap[topLevelDomain] || topLevelDomain;
               }
+              
             
 
 
