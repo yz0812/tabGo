@@ -149,7 +149,7 @@ function getGroupNames() {
 //获取白名单
 function getWhitelist() {
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get(["whitelist"], function (result) {
+    chrome.storage.sync.get(["whitelist"], function (result) {
       if (chrome.runtime.lastError) {
         reject(
           new Error(
@@ -351,14 +351,18 @@ async function groupTabs() {
               }
 
 
-                      // 获取自定义分组名称
+              // 获取自定义分组名称
               let groupName = groupNames[topLevelDomain] || topLevelDomain;
-// 获取扩展名称分组 
-              if (extensionReplace && (tab.url.startsWith('extension://') || tab.url.startsWith('chrome-extension://'))) {
+              // 获取扩展名称分组 
+              if (extensionReplace && ((tab.url.startsWith('extension://') || tab.url.startsWith('chrome-extension://')))) {
                 groupName = extensionReplaceMap[topLevelDomain] || topLevelDomain;
+              }else if(tab.url.startsWith('edge://extensions')){
+                groupName='扩展程序管理';
+              }else if(tab.url.startsWith('edge://settings')){
+                groupName='浏览器设置';
               }
               
-            
+              
 
 
               if (!groups[groupName]) {
