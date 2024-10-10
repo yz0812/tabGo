@@ -427,7 +427,55 @@ function determineGroupInfo(url, options) {
   // 应用自定义分组名称
   groupName = groupNames[targetDomain] || groupName;
 
+  groupName = processDomainName(groupName);
   return { name: groupName };
+}
+
+
+
+
+// 常见顶级域名列表
+const commonTLDs = [
+  'com', 'net', 'org', 'edu', 'gov', 'mil',
+  'top', 'xyz', 'app', 'dev', 'io', 'co',
+  'info', 'biz', 'name', 'pro', 'cloud', 'me',
+  'online', 'live', 'tech', 'site', 'website',
+  // 国家顶级域名
+  'cn', 'us', 'uk', 'ru', 'jp', 'de', 'fr', 'au'
+];
+
+/**
+* 处理域名，如果是常见域名格式则去除后缀
+* @param {string} groupName - 要处理的字符串
+* @returns {string} - 处理后的字符串
+*/
+function processDomainName(groupName) {
+  // 如果输入为空，直接返回
+  if (!groupName) return groupName;
+  
+  // 移除可能存在的协议前缀（http:// 或 https://）
+  let cleanName = groupName.replace(/^(https?:\/\/)?/, '');
+  
+  // 移除可能存在的 www. 前缀
+  cleanName = cleanName.replace(/^www\./, '');
+  
+  // 分割域名部分
+  const parts = cleanName.split('.');
+  
+  // 如果只有一个部分，说明不是域名格式，直接返回
+  if (parts.length === 1) return groupName;
+  
+  // 获取最后一个部分作为可能的顶级域名
+  const possibleTLD = parts[parts.length - 1].toLowerCase();
+  
+  // 如果最后一部分是常见顶级域名
+  if (commonTLDs.includes(possibleTLD)) {
+      // 返回去除顶级域名的部分
+      return parts.slice(0, -1).join('.');
+  }
+  
+  // 如果不是常见域名格式，返回原始输入
+  return groupName;
 }
 
 /**
@@ -463,43 +511,78 @@ async function updateTabGroups(groups, existingGroupsMap) {
   }
 }
 
+
 /**
- * 重新排序标签页和分组
+ * 重新排序标签页和分组，确保分组在固定标签页之后，未分组标签在最后
  * @returns {Promise<void>}
  */
 async function reorderTabsAndGroups() {
   try {
+    // 获取当前窗口及其所有标签页
     const window = await chrome.windows.getCurrent({ populate: true });
+    
+    // 获取所有标签页信息
+    const allTabs = await chrome.tabs.query({ windowId: window.id });
+    
+    // 计算固定标签页的数量
+    const pinnedTabsCount = allTabs.filter(tab => tab.pinned).length;
+    
+    // 获取所有标签组
     const allGroups = await chrome.tabGroups.query({ windowId: window.id });
     
-    let currentIndex = 0;
-    
-    // 首先移动所有的标签组
+    // 按组ID排序标签组
     allGroups.sort((a, b) => a.id - b.id);
     
+    // 从固定标签后面开始排序
+    let currentIndex = pinnedTabsCount;
+    
+    // 首先处理所有分组的标签
     for (const group of allGroups) {
-      await chrome.tabGroups.move(group.id, { index: currentIndex });
-      const groupTabs = await chrome.tabs.query({ groupId: group.id });
-      currentIndex += groupTabs.length;
+      // 查询属于当前组的所有非固定标签
+      const groupTabs = await chrome.tabs.query({
+        windowId: window.id,
+        groupId: group.id,
+        pinned: false
+      });
+      
+      if (groupTabs.length > 0) {
+        // 移动整个标签组到正确的位置（固定标签之后）
+        await chrome.tabGroups.move(group.id, { index: currentIndex });
+        
+        // 确保组内的标签都在正确的位置
+        for (const tab of groupTabs) {
+          await chrome.tabs.move(tab.id, { index: currentIndex });
+          currentIndex++;
+        }
+      }
     }
     
-    // 移动未分组的标签到末尾
+    // 最后处理未分组的非固定标签
     const ungroupedTabs = await chrome.tabs.query({
       windowId: window.id,
-      groupId: chrome.tabGroups.TAB_GROUP_ID_NONE
+      groupId: chrome.tabGroups.TAB_GROUP_ID_NONE,
+      pinned: false
     });
     
+    // 创建移动未分组标签的Promise数组
     const movePromises = ungroupedTabs.map(tab => 
-      chrome.tabs.move(tab.id, { index: -1 }).catch(err => 
-        console.error(`Error moving tab ${tab.id}:`, err)
-      )
+      chrome.tabs.move(tab.id, { index: -1 })
+        .catch(err => console.error(`Error moving ungrouped tab ${tab.id}:`, err))
     );
     
+    // 等待所有未分组标签移动完成
     await Promise.all(movePromises);
+    
+    console.log('Reordering completed successfully');
   } catch (error) {
     console.error("Error in reorderTabsAndGroups:", error);
+    // 可以添加更详细的错误信息
+    if (error.message.includes('pinned tabs')) {
+      console.error("Error details: Some tabs are pinned and affecting the reordering process");
+    }
   }
 }
+
 
 /**
  * 展开所有标签组
