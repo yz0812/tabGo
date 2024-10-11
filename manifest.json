@@ -23,5 +23,10 @@
 			"js": ["content_script.js"]
 		}
 	],
+	
+	  "web_accessible_resources": [{
+		"resources": ["domain.txt","aliases.json"],
+		"matches": ["<all_urls>"]
+	  }],
 	"host_permissions": ["*://*/*"]
 }

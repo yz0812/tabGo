@@ -1,0 +1,250 @@
+[
+    {
+      "domain": "chrome://extensions",
+      "name": "扩展程序管理"
+    },
+    {
+      "domain": "chrome://settings",
+      "name": "浏览器设置"
+    },
+    {
+      "domain": "chrome://history",
+      "name": "浏览历史"
+    },
+    {
+      "domain": "chrome://downloads",
+      "name": "下载内容"
+    },
+    {
+      "domain": "chrome://bookmarks",
+      "name": "书签管理"
+    },
+    {
+      "domain": "chrome://newtab",
+      "name": "新标签页"
+    },
+    {
+      "domain": "chrome://version",
+      "name": "版本信息"
+    },
+    {
+      "domain": "chrome://plugins",
+      "name": "插件信息"
+    },
+    {
+      "domain": "chrome://memory",
+      "name": "内存信息"
+    },
+    {
+      "domain": "chrome://sync",
+      "name": "同步状态"
+    },
+    {
+      "domain": "chrome://crashes",
+      "name": "崩溃报告"
+    },
+    {
+      "domain": "chrome://apps",
+      "name": "应用程序"
+    },
+    {
+      "domain": "chrome://flags",
+      "name": "实验性功能"
+    },
+    {
+      "domain": "chrome://inspect",
+      "name": "开发者工具"
+    },
+    {
+      "domain": "chrome://net-internals",
+      "name": "网络内部信息"
+    },
+    {
+      "domain": "chrome://gpu",
+      "name": "GPU信息"
+    },
+    {
+      "domain": "chrome://components",
+      "name": "组件"
+    },
+    {
+      "domain": "chrome://policy",
+      "name": "策略"
+    },
+    {
+      "domain": "chrome://predictors",
+      "name": "预测服务"
+    },
+    {
+      "domain": "chrome://quota-internals",
+      "name": "配额管理"
+    },
+    {
+      "domain": "chrome://safe-browsing",
+      "name": "安全浏览"
+    },
+    {
+      "domain": "chrome://serviceworker-internals",
+      "name": "Service Worker信息"
+    },
+    {
+      "domain": "chrome://media-internals",
+      "name": "媒体内部信息"
+    },
+    {
+      "domain": "chrome://device-log",
+      "name": "设备日志"
+    },
+    {
+      "domain": "chrome://accessibility",
+      "name": "无障碍功能"
+    },
+    {
+      "domain": "chrome://extensions-internals",
+      "name": "扩展内部信息"
+    },
+    {
+      "domain": "chrome://process-internals",
+      "name": "进程信息"
+    },
+    {
+      "domain": "chrome://site-engagement",
+      "name": "网站参与度"
+    },
+    {
+      "domain": "chrome://password-manager-internals",
+      "name": "密码管理器内部信息"
+    },
+    {
+      "domain": "chrome://interstitials",
+      "name": "警告页面"
+    },
+    {
+      "domain": "chrome://dino",
+      "name": "离线恐龙游戏"
+    },
+    {
+      "domain": "chrome://welcome",
+      "name": "欢迎页面"
+    },
+    {
+      "domain": "edge://extensions",
+      "name": "扩展程序管理"
+    },
+    {
+      "domain": "edge://settings",
+      "name": "浏览器设置"
+    },
+    {
+      "domain": "edge://history",
+      "name": "浏览历史"
+    },
+    {
+      "domain": "edge://downloads",
+      "name": "下载内容"
+    },
+    {
+      "domain": "edge://favorites",
+      "name": "收藏夹"
+    },
+    {
+      "domain": "edge://newtab",
+      "name": "新标签页"
+    },
+    {
+      "domain": "edge://version",
+      "name": "版本信息"
+    },
+    {
+      "domain": "edge://system",
+      "name": "系统信息"
+    },
+    {
+      "domain": "edge://sync",
+      "name": "同步状态"
+    },
+    {
+      "domain": "edge://crashes",
+      "name": "崩溃报告"
+    },
+    {
+      "domain": "edge://apps",
+      "name": "应用程序"
+    },
+    {
+      "domain": "edge://flags",
+      "name": "实验性功能"
+    },
+    {
+      "domain": "edge://inspect",
+      "name": "开发者工具"
+    },
+    {
+      "domain": "edge://net-internals",
+      "name": "网络内部信息"
+    },
+    {
+      "domain": "edge://gpu",
+      "name": "GPU信息"
+    },
+    {
+      "domain": "edge://components",
+      "name": "组件"
+    },
+    {
+      "domain": "edge://policy",
+      "name": "策略"
+    },
+    {
+      "domain": "edge://discards",
+      "name": "丢弃的标签页"
+    },
+    {
+      "domain": "edge://edge-urls",
+      "name": "Edge URL列表"
+    },
+    {
+      "domain": "edge://compat",
+      "name": "兼容性"
+    },
+    {
+      "domain": "edge://management",
+      "name": "管理"
+    },
+    {
+      "domain": "edge://serviceworker-internals",
+      "name": "Service Worker信息"
+    },
+    {
+      "domain": "edge://media-internals",
+      "name": "媒体内部信息"
+    },
+    {
+      "domain": "edge://bluetooth-internals",
+      "name": "蓝牙内部信息"
+    },
+    {
+      "domain": "edge://usb-internals",
+      "name": "USB内部信息"
+    },
+    {
+      "domain": "edge://indexeddb-internals",
+      "name": "IndexedDB内部信息"
+    },
+    {
+      "domain": "edge://accessibility",
+      "name": "无障碍功能"
+    },
+    {
+      "domain": "edge://extensions-internals",
+      "name": "扩展内部信息"
+    },
+    {
+      "domain": "edge://protocols",
+      "name": "协议处理程序"
+    },
+    {
+      "domain": "edge://password-manager",
+      "name": "密码管理器"
+    }
+  ]

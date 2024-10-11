@@ -12,6 +12,60 @@ chrome.storage.onChanged.addListener(handleStorageChange);
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 chrome.runtime.onMessage.addListener(handleMessage);
 
+// 域名后缀
+let commonTLDs = [];
+
+// 在扩展启动时加载域名列表
+async function loadTLDs() {
+  try {
+    const response = await fetch(chrome.runtime.getURL('domain.txt'));
+    const text = await response.text();
+    commonTLDs = text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('//'));
+    
+    console.log(`Loaded ${commonTLDs.length} TLDs`);
+  } catch (error) {
+    console.error('Error loading TLDs:', error);
+  }
+}
+
+// 在后台脚本(background.js)中：
+let globalAliases = null;
+
+// 在扩展启动时加载
+chrome.runtime.onInstalled.addListener(async () => {
+  globalAliases = await loadAliases();
+});
+
+// 加载并解析 aliases.json
+async function loadAliases() {
+  try {
+    const response = await fetch(chrome.runtime.getURL('aliases.json'));
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const aliases = await response.json();
+    
+    // 创建一个映射对象，用于快速查找
+    const urlAliasMap = new Map(aliases.map(item => [item.domain, item.name]));
+    
+    return {
+      aliases,       // 原始数组
+      urlAliasMap   // Map对象，用于快速查找
+    };
+  } catch (error) {
+    console.error('Error loading aliases.json:', error);
+    return {
+      aliases: [],
+      urlAliasMap: new Map()
+    };
+  }
+}
+
+// 在扩展启动时调用加载函数
+loadTLDs();
+
 /**
  * 初始化右键菜单
  */
@@ -417,11 +471,13 @@ function determineGroupInfo(url, options) {
   if (extensionReplace && url.protocol.includes('extension')) {
     const extensionId = url.hostname;
     groupName = extensionReplaceMap[extensionId] || extensionId;
-  } else if (url.protocol === 'edge:') {
+  } else if (url.protocol === 'edge:'|| url.protocol === 'chrome:') {
     // 处理Edge特殊页面
-    groupName = url.hostname.startsWith('extensions') ? '扩展程序管理' : 
-                url.hostname.startsWith('settings') ? '浏览器设置' : 
-                targetDomain;
+    for (const [domain, name] of globalAliases.urlAliasMap.entries()) {
+      if (url.origin.startsWith(domain)) {
+        groupName = name;
+      }
+    }
   }
 
   // 应用自定义分组名称
@@ -434,15 +490,6 @@ function determineGroupInfo(url, options) {
 
 
 
-// 常见顶级域名列表
-const commonTLDs = [
-  'com', 'net', 'org', 'edu', 'gov', 'mil',
-  'top', 'xyz', 'app', 'dev', 'io', 'co',
-  'info', 'biz', 'name', 'pro', 'cloud', 'me',
-  'online', 'live', 'tech', 'site', 'website',
-  // 国家顶级域名
-  'cn', 'us', 'uk', 'ru', 'jp', 'de', 'fr', 'au'
-];
 
 /**
 * 处理域名，如果是常见域名格式则去除后缀
