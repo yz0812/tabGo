@@ -231,6 +231,7 @@ auction
 associates
 art
 army
+cc
 
 // 国家和地区顶级域名(ccTLD)
 cn
