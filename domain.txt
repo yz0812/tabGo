@@ -326,6 +326,7 @@ vc
 vg
 wf
 ws
+do
 
 // 新通用顶级域名(new gTLD)
 dev
