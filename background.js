@@ -4,6 +4,7 @@
  */
 
 // 监听器设置
+chrome.windows.onCreated.addListener(clearGroupedTabs);
 chrome.runtime.onInstalled.addListener(initializeContextMenus);
 chrome.tabs.onUpdated.addListener(handleTabUpdate);
 chrome.tabs.onActivated.addListener(handleTabActivation);
@@ -280,6 +281,14 @@ function getActiveTab() {
       resolve(tabs[0] || null);
     });
   });
+}
+
+/**
+ * 获取是否启动时关闭分组数据
+ * @returns {Promise<Object>}
+ */
+function getClearGroupedTabs() {
+  return getStorageValue("clearGroupedTabs").then((value) => value || false);
 }
 
 /**
@@ -762,3 +771,33 @@ const errorHandler = {
   }
 };
 
+/**
+ * 关闭所有分组标签
+ * @param {Error} error
+ * @param {string} context
+ */
+async function clearGroupedTabs() {
+  const isClearGroupedTabs = await getClearGroupedTabs();
+  if (!isClearGroupedTabs) return;
+  
+    try {
+      const tabGroups = await chrome.tabGroups.query({});
+
+      const closeTabPromises = [];
+
+      for (const group of tabGroups) {
+        const groupTabs = await chrome.tabs.query({ groupId: group.id });
+
+        for (const tab of groupTabs) {
+          await chrome.tabs.ungroup(tab.id);
+          closeTabPromises.push(chrome.tabs.remove(tab.id));
+        }
+      }
+
+      await Promise.all(closeTabPromises);
+      console.log("All grouped tabs closed on window open.");
+    } catch (error) {
+      console.error("Error removing grouped tabs on window open:", error);
+    }
+  
+}

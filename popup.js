@@ -82,4 +82,20 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+  const toggle = document.getElementById("clearGroupedTabs");
+
+  // 从 chrome.storage.local 中读取开关状态
+  chrome.storage.local.get(["clearGroupedTabs"], function (result) {
+    if (result.clearGroupedTabs !== undefined) {
+      toggle.checked = result.clearGroupedTabs; // 根据存储的值设置 toggle 的初始状态
+    }
+  });
+
+  // 当 toggle 开关状态改变时，将新状态写入 chrome.storage.local
+  toggle.addEventListener("change", function () {
+    const isEnabled = toggle.checked; // 获取当前开关状态
+    chrome.storage.local.set({ clearGroupedTabs: isEnabled }, function () {});
+  });
+});
 
