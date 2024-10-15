@@ -2,6 +2,18 @@ document.getElementById("quickGroupButton").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "quickGroup" });
 });
 
+
+document.getElementById('toggleSettings').addEventListener('click', function() {
+  var settingsContainer = document.getElementById('settingsContainer');
+  if (settingsContainer.style.display === 'none' || settingsContainer.style.display === '') {
+    settingsContainer.style.display = 'block';
+    this.textContent = '收起';
+  } else {
+    settingsContainer.style.display = 'none';
+    this.textContent = '更多';
+  }
+});
+
 document.addEventListener("DOMContentLoaded", function () {
   const toggle = document.getElementById("subdomainToggle");
 
