@@ -365,41 +365,50 @@ async function ungroupAllTabs() {
  */
 async function groupTabs() {
   try {
-    const [
-      tabs,
-      tabGroups,
-      localIsEnabled,
-      whitelist,
-      groupNames,
-      extensionReplaceMap,
-      extensionReplace
-    ] = await Promise.all([
-      chrome.tabs.query({}),
-      chrome.tabGroups.query({}),
-      getSubdomainEnabled(),
-      getWhitelist(),
-      getGroupNames(),
-      getExtensionReplaceMap(),
-      getStorageValue('extensionReplace')
-    ]);
-
-    const { groups, existingGroupsMap } = await processAndGroupTabs(
-      tabs, 
-      tabGroups,
-      {
+    // 获取所有窗口
+    const windows = await chrome.windows.getAll();
+    
+    // 对每个窗口单独处理
+    for (const window of windows) {
+      const [
+        tabs,
+        tabGroups,
         localIsEnabled,
         whitelist,
         groupNames,
         extensionReplaceMap,
         extensionReplace
-      }
-    );
+      ] = await Promise.all([
+        // 指定 windowId 只查询当前窗口的标签页
+        chrome.tabs.query({ windowId: window.id }),
+        // 指定 windowId 只查询当前窗口的标签组
+        chrome.tabGroups.query({ windowId: window.id }),
+        getSubdomainEnabled(),
+        getWhitelist(),
+        getGroupNames(),
+        getExtensionReplaceMap(),
+        getStorageValue('extensionReplace')
+      ]);
 
-    await updateTabGroups(groups, existingGroupsMap);
-    
-    const groupTop = await getGroupTop();
-    if (groupTop) {
-      await reorderTabsAndGroups();
+      const { groups, existingGroupsMap } = await processAndGroupTabs(
+        tabs, 
+        tabGroups,
+        {
+          localIsEnabled,
+          whitelist,
+          groupNames,
+          extensionReplaceMap,
+          extensionReplace
+        }
+      );
+
+      await updateTabGroups(groups, existingGroupsMap);
+      
+      const groupTop = await getGroupTop();
+      if (groupTop) {
+        // 传入 windowId 确保只重排当前窗口的标签
+        await reorderTabsAndGroups(window.id);
+      }
     }
 
   } catch (error) {
@@ -572,40 +581,34 @@ async function updateTabGroups(groups, existingGroupsMap) {
  * 重新排序标签页和分组，确保分组在固定标签页之后，未分组标签在最后
  * @returns {Promise<void>}
  */
-async function reorderTabsAndGroups() {
+async function reorderTabsAndGroups(windowId) {
   try {
-    // 获取当前窗口及其所有标签页
-    const window = await chrome.windows.getCurrent({ populate: true });
+    // 使用传入的 windowId 而不是获取当前窗口
+    const window = await chrome.windows.get(windowId, { populate: true });
     
-    // 获取所有标签页信息
-    const allTabs = await chrome.tabs.query({ windowId: window.id });
+    // 获取指定窗口的所有标签页
+    const allTabs = await chrome.tabs.query({ windowId: windowId });
     
-    // 计算固定标签页的数量
     const pinnedTabsCount = allTabs.filter(tab => tab.pinned).length;
     
-    // 获取所有标签组
-    const allGroups = await chrome.tabGroups.query({ windowId: window.id });
+    // 获取指定窗口的所有标签组
+    const allGroups = await chrome.tabGroups.query({ windowId: windowId });
     
-    // 按组ID排序标签组
+    // 其余代码保持不变...
     allGroups.sort((a, b) => a.id - b.id);
     
-    // 从固定标签后面开始排序
     let currentIndex = pinnedTabsCount;
     
-    // 首先处理所有分组的标签
     for (const group of allGroups) {
-      // 查询属于当前组的所有非固定标签
       const groupTabs = await chrome.tabs.query({
-        windowId: window.id,
+        windowId: windowId,
         groupId: group.id,
         pinned: false
       });
       
       if (groupTabs.length > 0) {
-        // 移动整个标签组到正确的位置（固定标签之后）
         await chrome.tabGroups.move(group.id, { index: currentIndex });
         
-        // 确保组内的标签都在正确的位置
         for (const tab of groupTabs) {
           await chrome.tabs.move(tab.id, { index: currentIndex });
           currentIndex++;
@@ -613,32 +616,24 @@ async function reorderTabsAndGroups() {
       }
     }
     
-    // 最后处理未分组的非固定标签
     const ungroupedTabs = await chrome.tabs.query({
-      windowId: window.id,
+      windowId: windowId,
       groupId: chrome.tabGroups.TAB_GROUP_ID_NONE,
       pinned: false
     });
     
-    // 创建移动未分组标签的Promise数组
     const movePromises = ungroupedTabs.map(tab => 
       chrome.tabs.move(tab.id, { index: -1 })
         .catch(err => console.error(`Error moving ungrouped tab ${tab.id}:`, err))
     );
     
-    // 等待所有未分组标签移动完成
     await Promise.all(movePromises);
     
     console.log('Reordering completed successfully');
   } catch (error) {
     console.error("Error in reorderTabsAndGroups:", error);
-    // 可以添加更详细的错误信息
-    if (error.message.includes('pinned tabs')) {
-      console.error("Error details: Some tabs are pinned and affecting the reordering process");
-    }
   }
 }
-
 
 /**
  * 展开所有标签组
