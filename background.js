@@ -773,7 +773,9 @@ const errorHandler = {
  */
 async function clearGroupedTabs() {
   const isClearGroupedTabs = await getClearGroupedTabs();
-  if (!isClearGroupedTabs) return;
+  const windows = await chrome.windows.getAll();
+  
+  if (!isClearGroupedTabs || windows.length != 1) return;
   
     try {
       const tabGroups = await chrome.tabGroups.query({});
