@@ -164,6 +164,7 @@ function handleMessage(message, sender, sendResponse) {
  * @param {object} tab - 标签页对象
  */
 function handleContextMenuClick(info, tab) {
+  debugger
   const handlers = {
     addWhitelist: () => {
       const url = new URL(tab.url);
@@ -176,6 +177,14 @@ function handleContextMenuClick(info, tab) {
         tab.id,
         { action: "promptForGroupName" },
         response => {
+          // 检查是否有运行时错误
+          if (chrome.runtime.lastError) {
+            // 创建一个通知或弹窗
+            // TODO 在edge的性能模式下面 浏览器页面长久为刷新会进入未激活状态这个时候没有办法弹出sendMessage  没有办法弹出提示sendMessage
+            //handleSendMessageError(chrome.runtime.lastError.message);
+            //return;
+          }
+
           if (response?.groupName && response?.domain) {
             setGroupName(response.domain, response.groupName);
             groupTabs();
@@ -189,6 +198,21 @@ function handleContextMenuClick(info, tab) {
     handlers[info.menuItemId]();
   }
 }
+
+
+function handleSendMessageError(error) {
+  // 使用 Chrome 通知
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'path/to/icon.png', // 确保有扩展图标
+    title: '页面操作错误',
+    message: error || '页面未激活，请刷新重试'
+  });
+
+  // 记录错误
+  console.error('Message sending error:', error);
+}
+
 
 /**
  * 处理手风琴模式变更
@@ -314,10 +338,8 @@ async function setGroupName(domain, newGroupName) {
     getGroupNames(),
     getSubdomainEnabled()
   ]);
-
-  const domainParts = domain.split(".");
-  const targetDomain = subdomainEnabled ? domain : domainParts.slice(-2).join(".");
-
+  // 获取域名或者IP
+  const targetDomain = getNormalizedDomain(domain,subdomainEnabled);
   const updatedGroupNames = {
     ...groupNames,
     [targetDomain]: newGroupName
