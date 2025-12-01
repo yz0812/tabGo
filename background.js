@@ -88,33 +88,34 @@ function initializeContextMenus() {
 
 /**
  * 处理标签页更新
- * @param {number} tabId - 标签页ID
- * @param {object} changeInfo - 变更信息
  */
-function handleTabUpdate(tabId, changeInfo) {
+function handleTabUpdate(tabId, changeInfo, tab) {
   if (changeInfo.status === "complete") {
-    groupTabs();
+    // tab 对象包含 windowId，直接传给 groupTabs
+    groupTabs(tab.windowId);
   }
 }
 
 /**
  * 处理标签页激活
- * @param {object} activeInfo - 激活信息
  */
 function handleTabActivation(activeInfo) {
+  // activeInfo 包含 windowId
   chrome.tabs.get(activeInfo.tabId, tab => {
+    // 同时也只处理当前窗口的折叠逻辑
     collapseOtherTabGroups(tab).catch(console.error);
   });
+  // 激活通常不需要重新分组，除非你有特殊需求，如果需要也只处理当前窗口
+  // groupTabs(activeInfo.windowId); 
 }
 
 /**
  * 处理标签页移除
- * @param {number} tabId - 标签页ID
- * @param {object} removeInfo - 移除信息
  */
 function handleTabRemoval(tabId, removeInfo) {
   if (!removeInfo.isWindowClosing) {
-    groupTabs();
+    // removeInfo 包含 windowId
+    groupTabs(removeInfo.windowId);
   }
 }
 
@@ -151,10 +152,13 @@ function handleStorageChange(changes) {
  */
 function handleMessage(message, sender, sendResponse) {
   if (message.action === "quickGroup") {
-    groupTabs().then(() => {
+    // 如果消息来自某个标签页，sender.tab.windowId 存在
+    // 如果是全局快捷键，可能需要获取当前窗口
+    const targetWindowId = sender.tab ? sender.tab.windowId : null;
+    groupTabs(targetWindowId).then(() => {
       sendResponse({ status: "Tabs grouped successfully" });
     });
-    return true; // 保持消息通道开放
+    return true; 
   }
 }
 
@@ -382,13 +386,23 @@ async function ungroupAllTabs() {
   await Promise.all(ungroupPromises);
 }
 
+
 /**
  * 主要的标签分组逻辑
+ * @param {number|null} targetWindowId - 指定要处理的窗口ID，如果为null则处理所有窗口
  */
-async function groupTabs() {
+async function groupTabs(targetWindowId = null) {
   try {
-    // 获取所有窗口
-    const windows = await chrome.windows.getAll();
+    let windows = [];
+    
+    if (targetWindowId) {
+      // 如果指定了窗口，只处理这一个
+      // 我们构造一个包含 id 的对象即可，不需要完整的 window 对象
+      windows = [{ id: targetWindowId }];
+    } else {
+      // 只有在初始化或更改全局设置时，才处理所有窗口
+      windows = await chrome.windows.getAll();
+    }
     
     // 对每个窗口单独处理
     for (const window of windows) {
@@ -401,9 +415,7 @@ async function groupTabs() {
         extensionReplaceMap,
         extensionReplace
       ] = await Promise.all([
-        // 指定 windowId 只查询当前窗口的标签页
         chrome.tabs.query({ windowId: window.id }),
-        // 指定 windowId 只查询当前窗口的标签组
         chrome.tabGroups.query({ windowId: window.id }),
         getSubdomainEnabled(),
         getWhitelist(),
@@ -424,11 +436,11 @@ async function groupTabs() {
         }
       );
 
-      await updateTabGroups(groups, existingGroupsMap);
+      // 【关键修改】将 window.id 传递给 updateTabGroups
+      await updateTabGroups(groups, existingGroupsMap, window.id);
       
       const groupTop = await getGroupTop();
       if (groupTop) {
-        // 传入 windowId 确保只重排当前窗口的标签
         await reorderTabsAndGroups(window.id);
       }
     }
@@ -570,10 +582,9 @@ function processDomainName(groupName) {
  * @param {Object} groups - 分组对象
  * @param {Object} existingGroupsMap - 现有分组映射
  */
-async function updateTabGroups(groups, existingGroupsMap) {
+async function updateTabGroups(groups, existingGroupsMap, windowId) {
   for (const [groupName, groupTabs] of Object.entries(groups)) {
     if (groupTabs.length <= 1) {
-      // 移除单个标签的分组
       if (groupTabs.length === 1) {
         await chrome.tabs.ungroup(groupTabs[0].id).catch(console.error);
       }
@@ -590,14 +601,19 @@ async function updateTabGroups(groups, existingGroupsMap) {
       }).catch(console.error);
     } else {
       // 创建新分组
-      const groupId = await chrome.tabs.group({ tabIds }).catch(console.error);
+      // 【关键修复】：显式指定 createProperties: { windowId }
+      // 这强制浏览器在指定窗口创建新组，而不是合并到其他窗口的同名组
+      const groupId = await chrome.tabs.group({ 
+        tabIds,
+        createProperties: { windowId: windowId } 
+      }).catch(console.error);
+
       if (groupId) {
         await chrome.tabGroups.update(groupId, { title: groupName }).catch(console.error);
       }
     }
   }
 }
-
 
 /**
  * 重新排序标签页和分组，确保分组在固定标签页之后，未分组标签在最后
