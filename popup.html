@@ -1,183 +1,201 @@
 <!DOCTYPE html>
 <html lang="zh">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>TabGo</title>
-		<style>
-			:root {
-				--primary-color: #4a90e2;
-				--secondary-color: #f5f7fa;
-				--text-color: #333;
-				--border-radius: 8px;
-				--transition: all 0.3s ease;
-			}
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>TabGo</title>
+        <style>
+            :root {
+                --primary-color: #4a90e2;
+                --secondary-color: #f5f7fa;
+                --text-color: #333;
+                --border-radius: 8px;
+                --transition: all 0.3s ease;
+            }
 
-			body {
-				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-				width: 200px;
-				margin: 0;
-				padding: 20px;
-				background-color: var(--secondary-color);
-				color: var(--text-color);
-				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-				border-radius: var(--border-radius);
-			}
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                width: 230px;
+                margin: 0;
+                padding: 0; /* 设为0，防止撑开滚动条 */
+                background-color: var(--secondary-color);
+                color: var(--text-color);
+                overflow-x: hidden; /* 防止水平溢出 */
+            }
 
-			h3 {
-				text-align: center;
-				color: var(--primary-color);
-				font-size: 24px;
-				margin-bottom: 20px;
-			}
+            /* 新增容器层：控制内边距 */
+            .container {
+                padding: 16px; /* 适当的全局边距 */
+                box-sizing: border-box;
+                width: 100%;
+            }
 
-			button,
-			a {
-				width: 100%;
-				padding: 12px;
-				margin: 10px 0;
-				background-color: var(--primary-color);
-				color: white;
-				border: none;
-				border-radius: var(--border-radius);
-				cursor: pointer;
-				transition: var(--transition);
-				font-size: 14px;
-				font-weight: bold;
-				text-align: center;
-				text-decoration: none;
-				display: block;
-				box-sizing: border-box;
-			}
+            h3 {
+                text-align: center;
+                color: var(--primary-color);
+                font-size: 22px;
+                margin-top: 5px;
+                margin-bottom: 15px;
+            }
 
-			button:hover,
-			a:hover {
-				background-color: #3a7bc8;
-				transform: translateY(-2px);
-			}
+            button,
+            a {
+                width: 100%;
+                padding: 10px; /* 稍微缩小一点，更精致 */
+                margin: 8px 0;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: var(--border-radius);
+                cursor: pointer;
+                transition: var(--transition);
+                font-size: 14px;
+                font-weight: bold;
+                text-align: center;
+                text-decoration: none;
+                display: block;
+                box-sizing: border-box;
+            }
 
-			.switch {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				margin: 5px 0;
-			}
+            button:hover,
+            a:hover {
+                background-color: #3a7bc8;
+                transform: translateY(-1px);
+            }
 
-			.switch-label {
-				font-size: 14px;
-				color: var(--text-color);
-			}
+            .switch {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin: 6px 0;
+            }
 
-			.switch input {
-				display: none;
-			}
+            .switch-label {
+                font-size: 13px;
+                color: var(--text-color);
+            }
 
-			.slider {
-				position: relative;
-				width: 50px;
-				height: 24px;
-				background-color: #ccc;
-				border-radius: 34px;
-				cursor: pointer;
-				transition: var(--transition);
-			}
+            .switch input {
+                display: none;
+            }
 
-			.slider::before {
-				position: absolute;
-				content: "";
-				height: 20px;
-				width: 20px;
-				left: 2px;
-				bottom: 2px;
-				background-color: white;
-				border-radius: 50%;
-				transition: var(--transition);
-			}
+            .slider {
+                position: relative;
+                width: 44px;
+                height: 22px;
+                background-color: #ccc;
+                border-radius: 34px;
+                cursor: pointer;
+                transition: var(--transition);
+            }
 
-			input:checked + .slider {
-				background-color: var(--primary-color);
-			}
+            .slider::before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 2px;
+                bottom: 2px;
+                background-color: white;
+                border-radius: 50%;
+                transition: var(--transition);
+            }
 
-			input:checked + .slider::before {
-				transform: translateX(26px);
-			}
+            input:checked + .slider {
+                background-color: var(--primary-color);
+            }
 
-			a {
-				background-color: transparent;
-				color: var(--primary-color);
-				border: 2px solid var(--primary-color);
-			}
+            input:checked + .slider::before {
+                transform: translateX(22px);
+            }
 
-			a:hover {
-				background-color: var(--primary-color);
-				color: white;
-			}
+            a {
+                background-color: transparent;
+                color: var(--primary-color);
+                border: 2px solid var(--primary-color);
+            }
 
-			#toggleSettings {
-				background-color: #f0f0f0;
-				color: var(--text-color);
-				border: 1px solid #ccc;
-				padding: 8px;
-				font-size: 12px;
-				margin-top: 15px;
-			}
+            a:hover {
+                background-color: var(--primary-color);
+                color: white;
+            }
 
-			#toggleSettings:hover {
-				background-color: #e0e0e0;
-			}
+            #toggleSettings {
+                background-color: #eeeeee;
+                color: #666;
+                border: 1px solid #ddd;
+                padding: 6px;
+                font-size: 12px;
+                margin-top: 10px;
+            }
 
-			#settingsContainer {
-				display: none;
-				margin-top: 15px;
-			}
-		</style>
-	</head>
-	<body>
-		<h3>TabGo</h3>
+            #toggleSettings:hover {
+                background-color: #e5e5e5;
+            }
 
-		<button id="quickGroupButton">快速分组</button>
-		<a href="options.html">白名单管理</a>
-		<a href="groupName.html">分组别名管理</a>
+            #settingsContainer {
+                display: none;
+                margin-top: 10px;
+                padding-bottom: 10px; /* 展开底部留白 */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h3>TabGo</h3>
 
-		<button id="toggleSettings">更多</button>
+            <button id="quickGroupButton">快速分组</button>
+            <a href="options.html">白名单管理</a>
+            <a href="groupName.html">分组别名管理</a>
 
-		<div id="settingsContainer">
-			<div class="switch">
-				<label class="switch">
-					<input type="checkbox" id="subdomainToggle" />
-					<span class="slider"></span>
-				</label>
-				<span class="switch-label">子域名分组</span>
-			</div>
-			<div class="switch">
-				<label class="switch">
-					<input type="checkbox" id="groupTop" />
-					<span class="slider"></span>
-				</label>
-				<span class="switch-label">分组在前</span>
-			</div>
-			<div class="switch">
-				<label class="switch">
-					<input type="checkbox" id="accordion" />
-					<span class="slider"></span>
-				</label>
-				<span class="switch-label">手风琴模式</span>
-			</div>
-			<div class="switch">
-				<label class="switch">
-					<input type="checkbox" id="extensionReplace" />
-					<span class="slider"></span>
-				</label>
-				<span class="switch-label">扩展程序别名</span>
-			</div>
-			<div class="switch">
-				<label class="switch">
-				<input type="checkbox" id="clearGroupedTabs" />
-				<span class="slider"></span>
-				</label>
-				<span class="switch-label">启动时关闭分组</span>
-			</div>
-		</div>
-		<script src="popup.js"></script>
-	</body>
+            <button id="toggleSettings">更多</button>
+
+            <div id="settingsContainer">
+                <button id="exportButton">导出配置</button>
+                <button id="importButton">导入配置</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" />
+                
+                <div class="switch">
+                    <label class="switch">
+                        <input type="checkbox" id="subdomainToggle" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">子域名分组</span>
+                </div>
+
+                <div class="switch">
+                    <label class="switch">
+                        <input type="checkbox" id="groupTop" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">分组在前</span>
+                </div>
+
+                <div class="switch">
+                    <label class="switch">
+                        <input type="checkbox" id="accordion" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">手风琴模式</span>
+                </div>
+
+                <div class="switch">
+                    <label class="switch">
+                        <input type="checkbox" id="extensionReplace" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">扩展程序别名</span>
+                </div>
+
+                <div class="switch">
+                    <label class="switch">
+                        <input type="checkbox" id="clearGroupedTabs" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">启动时关闭分组</span>
+                </div>
+            </div>
+        </div>
+        <script src="popup.js"></script>
+    </body>
 </html>

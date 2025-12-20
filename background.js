@@ -344,12 +344,15 @@ async function setGroupName(domain, newGroupName) {
   ]);
   // 获取域名或者IP
   const targetDomain = getNormalizedDomain(domain,subdomainEnabled);
-  const updatedGroupNames = {
-    ...groupNames,
-    [targetDomain]: newGroupName
-  };
 
-  await chrome.storage.sync.set({ groupNames: updatedGroupNames });
+  if (!groupNames[newGroupName]) {
+    groupNames[newGroupName] = [];
+  }
+  if (!groupNames[newGroupName].includes(targetDomain)) {
+    groupNames[newGroupName].push(targetDomain);
+  }
+
+  await chrome.storage.sync.set({ groupNames });
 }
 
 /**
@@ -533,7 +536,12 @@ function determineGroupInfo(url, options) {
   }
 
   // 应用自定义分组名称
-  groupName = groupNames[targetDomain] || groupName;
+  for (const [customGroupName, domains] of Object.entries(groupNames)) {
+    if (domains.includes(targetDomain)) {
+      groupName = customGroupName;
+      break;
+    }
+  }
 
   groupName = processDomainName(groupName);
   return { name: groupName };

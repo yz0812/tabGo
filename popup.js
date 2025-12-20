@@ -2,6 +2,75 @@ document.getElementById("quickGroupButton").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "quickGroup" });
 });
 
+// 导出配置
+document.getElementById("exportButton").addEventListener("click", () => {
+  chrome.storage.sync.get(["whitelist", "groupNames"], (result) => {
+    const data = {
+      whitelist: result.whitelist || [],
+      groupNames: result.groupNames || {}
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tabgo-config-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+});
+
+// 导入配置
+document.getElementById("importButton").addEventListener("click", () => {
+  document.getElementById("importFile").click();
+});
+
+document.getElementById("importFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const imported = JSON.parse(event.target.result);
+      chrome.storage.sync.get(["whitelist", "groupNames"], (result) => {
+        const whitelist = result.whitelist || [];
+        const groupNames = result.groupNames || {};
+
+        // 合并白名单
+        if (imported.whitelist) {
+          imported.whitelist.forEach(domain => {
+            if (!whitelist.includes(domain)) {
+              whitelist.push(domain);
+            }
+          });
+        }
+
+        // 合并分组名称
+        if (imported.groupNames) {
+          for (const [groupName, domains] of Object.entries(imported.groupNames)) {
+            if (!groupNames[groupName]) {
+              groupNames[groupName] = [];
+            }
+            domains.forEach(domain => {
+              if (!groupNames[groupName].includes(domain)) {
+                groupNames[groupName].push(domain);
+              }
+            });
+          }
+        }
+
+        chrome.storage.sync.set({ whitelist, groupNames }, () => {
+          alert("导入成功！");
+        });
+      });
+    } catch (error) {
+      alert("导入失败：文件格式错误");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
 
 document.getElementById('toggleSettings').addEventListener('click', function() {
   var settingsContainer = document.getElementById('settingsContainer');
@@ -78,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
 document.addEventListener("DOMContentLoaded", function () {
   const toggle = document.getElementById("extensionReplace");
 
-  // 从 chrome.storage.local 中读取开关状态
+  // 从 chrome.storage.local 中读取开关状态·
   chrome.storage.local.get(["extensionReplace"], function (result) {
     if (result.extensionReplace !== undefined) {
       toggle.checked = result.extensionReplace; // 根据存储的值设置 toggle 的初始状态
