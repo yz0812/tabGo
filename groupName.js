@@ -34,8 +34,10 @@ function refreshGroupNameList() {
 
         for (const [groupName, domains] of Object.entries(groupNames)) {
             const groupLi = document.createElement("li");
+            groupLi.className = "bg-white mb-2.5 rounded-lg border border-gray-100 overflow-hidden";
 
             const groupTitle = document.createElement("strong");
+            groupTitle.className = "flex items-center px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-gray-50 before:content-[''] before:w-0 before:h-0 before:border-t-[4px] before:border-t-transparent before:border-b-[4px] before:border-b-transparent before:border-l-[6px] before:border-l-gray-400 before:mr-2.5 before:transition-transform";
             groupTitle.textContent = groupName;
             groupTitle.onclick = () => {
                 groupLi.classList.toggle("expanded");
@@ -43,8 +45,7 @@ function refreshGroupNameList() {
 
             const groupDeleteIcon = document.createElement("span");
             groupDeleteIcon.textContent = "✕";
-            groupDeleteIcon.className = "remove-icon";
-            groupDeleteIcon.style.marginLeft = "auto";
+            groupDeleteIcon.className = "text-red-500 cursor-pointer text-lg ml-auto hover:text-red-700";
             groupDeleteIcon.onclick = (e) => {
                 e.stopPropagation();
                 if (confirm(`确定要删除分组"${groupName}"吗？`)) {
@@ -56,20 +57,20 @@ function refreshGroupNameList() {
             groupLi.appendChild(groupTitle);
 
             const domainList = document.createElement("div");
-            domainList.className = "domain-list";
+            domainList.className = "domain-list hidden p-2 bg-gray-50 border-t border-gray-100";
 
             domains.forEach(domain => {
                 const domainItem = document.createElement("div");
-                domainItem.className = "domain-item";
+                domainItem.className = "flex items-center px-2.5 py-1.5 mb-1 rounded bg-white/50 hover:bg-white/80 transition-colors";
 
                 const domainText = document.createElement("span");
-                domainText.className = "domain-text";
+                domainText.className = "flex-1 text-sm text-gray-700 break-all";
                 domainText.textContent = domain;
                 domainItem.appendChild(domainText);
 
                 const removeIcon = document.createElement("span");
                 removeIcon.textContent = "✕";
-                removeIcon.className = "remove-icon";
+                removeIcon.className = "text-gray-300 cursor-pointer text-base ml-2 hover:text-red-500";
                 removeIcon.onclick = () => {
                     removeDomainFromGroup(groupName, domain);
                 };

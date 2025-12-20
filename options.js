@@ -33,16 +33,21 @@ function refreshWhitelist() {
 
     whitelist.forEach((domain, index) => {
       const li = document.createElement("li");
-      li.textContent = domain;
+      li.className = "flex items-center justify-between px-3 py-1.5 my-1 bg-white rounded shadow-sm";
+
+      const domainText = document.createElement("span");
+      domainText.textContent = domain;
+      domainText.className = "flex-1 text-gray-800";
 
       const removeIcon = document.createElement("span");
       removeIcon.textContent = "×";
-      removeIcon.className = "remove-icon";
+      removeIcon.className = "text-2xl text-red-500 cursor-pointer hover:text-red-700 transition-colors ml-2";
       removeIcon.onclick = () => {
         whitelist.splice(index, 1);
         chrome.storage.sync.set({ whitelist }, refreshWhitelist);
       };
 
+      li.appendChild(domainText);
       li.appendChild(removeIcon);
       listElement.appendChild(li);
     });

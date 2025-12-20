@@ -1,93 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>管理白名单</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        width: 300px;
-        margin: 0;
-        padding: 20px;
-        background-color: #f4f4f4;
-        color: #333;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-      }
-      h3 {
-        text-align: center;
-        color: #007bff;
-      }
-      input {
-        width: calc(100% - 12px);
-        padding: 8px;
-        margin: 10px 0;
-        border: 1px solid #ccc;
-        width: 280px;
-        border-radius: 5px;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-      }
-      button {
-        width: 100%;
-        padding: 10px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s;
-      }
-      button:hover {
-        background-color: #0056b3;
-      }
-      ul {
-        list-style-type: none;
-        padding: 0;
-        margin-top: 10px;
-      }
-      li {
-        background: #e9ecef;
-        padding: 8px;
-        margin: 5px 0;
-        border-radius: 5px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      li button {
-        background-color: #dc3545;
-        padding: 5px;
-        border: none;
-        border-radius: 3px;
-        cursor: pointer;
-        color: white;
-        font-size: 14px;
-      }
-      li button:hover {
-        background-color: #c82333;
-      }
+    <script src="css/tailwindcss.3.4.16.js"></script>
+</head>
+<body class="w-[300px] m-0 p-5 bg-gray-100 text-gray-800 shadow-lg rounded-lg">
+    <h3 class="text-center text-blue-600">管理白名单</h3>
+    <div class="flex gap-2 my-2.5">
+        <input type="text" id="domainInput" placeholder="输入域名或IP" class="flex-1 p-2 border border-gray-300 rounded shadow-inner" />
+        <button id="addDomainButton" class="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer transition-colors hover:bg-blue-700">添加</button>
+    </div>
 
-      .remove-icon {
-        color: #ccc;
-        cursor: pointer;
-        font-size: 16px;
-        margin-left: 8px;
-      }
-
-      .remove-icon:hover {
-        color: #ef4444;
-      }
-    </style>
-  </head>
-  <body>
-    <h3>管理白名单</h3>
-    <!-- <p>填写一级域名</p> -->
-    <input type="text" id="domainInput" placeholder="输入域名或IP" />
-    <button id="addDomainButton">添加</button>
-
-    <ul id="whitelist"></ul>
+    <ul id="whitelist" class="list-none p-0 mt-2.5"></ul>
 
     <script src="options.js"></script>
-  </body>
+</body>
 </html>

@@ -4,193 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>管理分组名称</title>
-    <style>
-      /* 核心修复 1：全局盒模型控制 */
-      * {
-        box-sizing: border-box;
-      }
-
-      :root {
-        --primary-color: #4a90e2;
-        --bg-color: #f5f7fa;
-        --text-color: #333;
-        --border-radius: 10px;
-        --transition: all 0.25s ease;
-      }
-
-      body {
-        font-family: "Segoe UI", -apple-system, sans-serif;
-        width: 300px; /* 固定宽度 */
-        margin: 0;
-        padding: 0; /* 核心修复 2：Body 必须为 0 */
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        overflow: hidden; /* 防止溢出抖动 */
-      }
-
-      /* 用容器来控制内边距 */
-      .container {
-        width: 100%;
-        padding: 16px 16px 24px 16px; /* 底部多留一点 padding */
-        display: block;
-      }
-
-      h3 {
-        text-align: center;
-        color: var(--primary-color);
-        font-size: 18px;
-        margin: 0 0 15px 0;
-      }
-
-      /* 核心修复 3：Flex 布局下的输入框宽度控制 */
-      .input-container {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 12px;
-        width: 100%;
-      }
-
-      input {
-        flex: 1; /* 自动分配空间 */
-        min-width: 0; /* 极其重要：防止 input 撑破 Flex 容器 */
-        padding: 8px 10px;
-        border: 2px solid #e0e6ed;
-        border-radius: var(--border-radius);
-        font-size: 13px;
-        outline: none;
-        transition: var(--transition);
-      }
-
-      input:focus {
-        border-color: var(--primary-color);
-        background: #fff;
-      }
-
-      .arrow {
-        flex-shrink: 0; /* 防止箭头被挤压 */
-        color: #999;
-        font-size: 14px;
-      }
-
-      button {
-        width: 100%;
-        padding: 10px;
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: var(--border-radius);
-        cursor: pointer;
-        font-weight: bold;
-        transition: var(--transition);
-      }
-
-      button:hover {
-        background-color: #357abd;
-      }
-
-      /* 列表样式 */
-      ul {
-        list-style: none;
-        padding: 0;
-        margin: 15px 0 0 0;
-      }
-
-      li {
-        background: white;
-        margin-bottom: 10px;
-        border-radius: var(--border-radius);
-        border: 1px solid #edf2f7;
-        overflow: hidden;
-      }
-
-      li strong {
-        display: flex;
-        align-items: center;
-        padding: 10px 12px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: background 0.2s;
-      }
-
-      li strong:hover {
-        background: #fcfdfe;
-      }
-
-      /* 旋转箭头指示器 */
-      li strong::before {
-        content: "";
-        width: 0;
-        height: 0;
-        border-top: 4px solid transparent;
-        border-bottom: 4px solid transparent;
-        border-left: 6px solid #a0aec0;
-        margin-right: 10px;
-        transition: transform 0.2s;
-      }
-
-      li.expanded strong::before {
-        transform: rotate(90deg);
-      }
-
-      .domain-list {
-        display: none;
-        padding: 8px;
-        background: #f8fafc;
-        border-top: 1px solid #edf2f7;
-      }
-
-      li.expanded .domain-list {
-        display: block;
-      }
-
-      .domain-item {
-        display: flex;
-        align-items: center;
-        background: white;
-        padding: 6px 10px;
-        margin-bottom: 4px;
-        border-radius: 4px;
-        border: 1px solid #eef2f7;
-      }
-
-      .domain-text {
-        flex: 1;
-        font-size: 12px;
-        color: #666;
-        word-break: break-all;
-      }
-
-      .remove-icon {
-        color: #ccc;
-        cursor: pointer;
-        font-size: 16px;
-        margin-left: 8px;
-      }
-
-      .remove-icon:hover {
-        color: #ef4444;
-      }
-    </style>
+    <script src="css/tailwindcss.3.4.16.js"></script>
   </head>
-  <body>
-    <div class="container">
-      <h3>管理分组名称</h3>
-      
-      <div class="input-container">
-        <input type="text" id="groupNameInput" placeholder="分组名" />
-        <span class="arrow">→</span>
-        <input type="text" id="domainInput" placeholder="域名" />
-      </div>
-      <button id="addDomainButton">添加成员</button>
+  <body class="w-[300px] m-0 p-0 bg-gray-50 text-gray-800 overflow-hidden">
+    <div class="w-full px-4 pt-4 pb-6">
+      <h3 class="text-center text-blue-500 text-lg mb-4">管理分组名称</h3>
 
-      <ul id="groupNameList">
-        <li class="expanded">
-          <strong>示例分组 (点击展开)</strong>
-          <div class="domain-list">
-            <div class="domain-item">
-              <span class="domain-text">google.com</span>
-              <span class="remove-icon">×</span>
+      <div class="flex items-center gap-1.5 mb-3 w-full">
+        <input type="text" id="groupNameInput" placeholder="分组名" class="flex-1 min-w-0 px-2.5 py-2 border-2 border-gray-200 rounded-lg text-sm outline-none transition-all focus:border-blue-500 focus:bg-white" />
+        <span class="flex-shrink-0 text-gray-400 text-sm">→</span>
+        <input type="text" id="domainInput" placeholder="域名" class="flex-1 min-w-0 px-2.5 py-2 border-2 border-gray-200 rounded-lg text-sm outline-none transition-all focus:border-blue-500 focus:bg-white" />
+      </div>
+      <button id="addDomainButton" class="w-full py-2.5 bg-blue-500 text-white border-none rounded-lg cursor-pointer font-bold transition-colors hover:bg-blue-600">添加成员</button>
+
+      <ul id="groupNameList" class="list-none p-0 mt-4">
+        <li class="bg-white mb-2.5 rounded-lg border border-gray-100 overflow-hidden expanded">
+          <strong class="flex items-center px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-gray-50 before:content-[''] before:w-0 before:h-0 before:border-t-[4px] before:border-t-transparent before:border-b-[4px] before:border-b-transparent before:border-l-[6px] before:border-l-gray-400 before:mr-2.5 before:transition-transform">示例分组 (点击展开)</strong>
+          <div class="domain-list hidden p-2 bg-gray-50 border-t border-gray-100">
+            <div class="domain-item flex items-center px-2.5 py-1.5 mb-1 rounded bg-white/50 hover:bg-white/80 transition-colors">
+              <span class="domain-text flex-1 text-sm text-gray-700 break-all">google.com</span>
+              <span class="remove-icon text-gray-300 cursor-pointer text-base ml-2 hover:text-red-500">×</span>
             </div>
           </div>
         </li>
@@ -198,5 +31,13 @@
     </div>
 
     <script src="groupName.js"></script>
+    <style>
+      li.expanded strong::before {
+        transform: rotate(90deg);
+      }
+      li.expanded .domain-list {
+        display: block;
+      }
+    </style>
   </body>
 </html>
