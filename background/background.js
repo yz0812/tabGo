@@ -478,9 +478,6 @@ function processAndGroupTabs(tabs, existingGroups, options) {
   tabs.forEach(tab => {
     try {
       const url = new URL(tab.url);
-      
-      // 跳过浏览器内置页面
-      if (url.protocol === "chrome:" || url.protocol === "about:") return;
 
       const groupInfo = determineGroupInfo(url, {
         localIsEnabled,
@@ -530,11 +527,15 @@ function determineGroupInfo(url, options) {
   if (extensionReplace && url.protocol.includes('extension')) {
     const extensionId = url.hostname;
     groupName = extensionReplaceMap[extensionId] || extensionId;
-  } else if (url.protocol === 'edge:'|| url.protocol === 'chrome:') {
-    // 处理Edge特殊页面
+  } else if (url.protocol === 'edge:' || url.protocol === 'chrome:') {
+    // 处理 Edge/Chrome 特殊页面
     if (globalAliases && globalAliases.urlAliasMap) {
+      // 构建完整的 URL 前缀用于匹配（不包含路径）
+      const urlPrefix = `${url.protocol}//${url.hostname}`;
+
       for (const [domain, name] of globalAliases.urlAliasMap.entries()) {
-        if (url.origin.startsWith(domain)) {
+        // 使用 URL 前缀匹配，这样 chrome://settings/privacy 也能匹配 chrome://settings
+        if (urlPrefix === domain || urlPrefix.startsWith(domain + '/')) {
           groupName = name;
           break;
         }
