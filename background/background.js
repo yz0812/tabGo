@@ -34,10 +34,13 @@ async function loadTLDs() {
 // 在后台脚本(background.js)中：
 let globalAliases = null;
 
-// 在扩展启动时加载
-chrome.runtime.onInstalled.addListener(async () => {
+// 在扩展启动时加载（不仅仅是安装时）
+async function initializeAliases() {
   globalAliases = await loadAliases();
-});
+}
+
+// 扩展安装时加载
+chrome.runtime.onInstalled.addListener(initializeAliases);
 
 // 加载并解析 aliases.json
 async function loadAliases() {
@@ -66,6 +69,7 @@ async function loadAliases() {
 
 // 在扩展启动时调用加载函数
 loadTLDs();
+initializeAliases();
 
 /**
  * 初始化右键菜单
@@ -528,9 +532,12 @@ function determineGroupInfo(url, options) {
     groupName = extensionReplaceMap[extensionId] || extensionId;
   } else if (url.protocol === 'edge:'|| url.protocol === 'chrome:') {
     // 处理Edge特殊页面
-    for (const [domain, name] of globalAliases.urlAliasMap.entries()) {
-      if (url.origin.startsWith(domain)) {
-        groupName = name;
+    if (globalAliases && globalAliases.urlAliasMap) {
+      for (const [domain, name] of globalAliases.urlAliasMap.entries()) {
+        if (url.origin.startsWith(domain)) {
+          groupName = name;
+          break;
+        }
       }
     }
   }

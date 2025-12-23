@@ -1,0 +1,30 @@
+# 从 GitHub 自动生成的源码包中排除这些文件
+# 这样 "Source code (zip)" 就不会包含这些开发文件
+
+# 开发脚本
+build.bat export-ignore
+build.sh export-ignore
+
+# 文档
+BUILD.md export-ignore
+README.md export-ignore
+
+# GitHub Actions
+.github/ export-ignore
+
+# 开发工具配置
+.gitattributes export-ignore
+.gitignore export-ignore
+
+# 临时文件
+maven-index.sqlite export-ignore
+nul export-ignore
+
+# 图片资源（如果不需要）
+img/ export-ignore
+
+# IDE 配置
+.vscode/ export-ignore
+.idea/ export-ignore
+.claude/ export-ignore
+.serena/ export-ignore
