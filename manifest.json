@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "TabGo",
 	"description": "Automatically group tabs and manage a whitelist",
-	"version": "1.5.1",
+	"version": "1.5.2",
 	"permissions": ["tabs", "storage", "tabGroups", "contextMenus","management"],
 	"background": {
 		"service_worker": "background/background.js"
