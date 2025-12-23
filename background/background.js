@@ -19,7 +19,7 @@ let commonTLDs = [];
 // 在扩展启动时加载域名列表
 async function loadTLDs() {
   try {
-    const response = await fetch(chrome.runtime.getURL('domain.txt'));
+    const response = await fetch(chrome.runtime.getURL('assets/data/domain.txt'));
     const text = await response.text();
     commonTLDs = text.split('\n')
       .map(line => line.trim())
@@ -42,7 +42,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // 加载并解析 aliases.json
 async function loadAliases() {
   try {
-    const response = await fetch(chrome.runtime.getURL('aliases.json'));
+    const response = await fetch(chrome.runtime.getURL('assets/data/aliases.json'));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

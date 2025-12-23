@@ -1,0 +1,87 @@
+name: Build Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: version
+        run: |
+          VERSION=$(grep -oP '"version":\s*"\K[^"]+' manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extension version: $VERSION"
+
+      - name: Prepare build directory
+        run: |
+          mkdir -p build/tabgo
+
+          # 复制需要的文件和目录
+          cp manifest.json build/tabgo/
+          cp -r background build/tabgo/
+          cp -r content build/tabgo/
+          cp -r popup build/tabgo/
+          cp -r options build/tabgo/
+          cp -r pages build/tabgo/
+          cp -r assets build/tabgo/
+
+          # 显示打包内容
+          echo "=== Build contents ==="
+          ls -la build/tabgo/
+          echo "=== Assets structure ==="
+          find build/tabgo/assets -type f
+
+      - name: Create ZIP package
+        run: |
+          cd build
+          zip -r ../tabgo-${{ steps.version.outputs.version }}.zip tabgo/
+          cd ..
+
+          # 显示打包结果
+          echo "=== Package created ==="
+          ls -lh tabgo-*.zip
+          unzip -l tabgo-*.zip | head -20
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tabgo-extension
+          path: tabgo-*.zip
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: tabgo-*.zip
+          body: |
+            ## TabGo v${{ steps.version.outputs.version }}
+
+            ### 安装方法
+            1. 下载 `tabgo-${{ steps.version.outputs.version }}.zip`
+            2. 解压到本地目录
+            3. 打开 Chrome 浏览器，访问 `chrome://extensions/`
+            4. 开启右上角的"开发者模式"
+            5. 点击"加载已解压的扩展程序"
+            6. 选择解压后的目录
+
+            ### 功能特性
+            - 自动标签页分组
+            - 白名单管理
+            - 分组别名管理
+            - 子域名分组
+            - 手风琴模式
+
+            ---
+            🤖 此版本由 GitHub Actions 自动构建
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

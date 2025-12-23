@@ -1,2 +1,26 @@
+# IDE
 .vscode
 .idea
+.claude
+
+# Serena
+.serena
+
+# Build artifacts
+dist/
+build/
+*.crx
+*.pem
+*.zip
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.log
+*.tmp
+maven-index.sqlite

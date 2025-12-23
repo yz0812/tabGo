@@ -163,10 +163,8 @@ tabGo/
 
 ## 📸 截图
 
-<img width="468" height="1078" alt="image" src="https://github.com/user-attachments/assets/c83d6bf5-5c9d-4a88-bd28-0cfe97c038e8" />
-
-<img width="482" height="654" alt="image" src="https://github.com/user-attachments/assets/a90d7ea8-8504-4803-bb94-ebd7aeb89cdf" />
-
+![img.png](img/img.png)
+![img.png](img/img2.png)
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
