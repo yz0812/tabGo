@@ -3,17 +3,194 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>管理白名单</title>
+    <title>白名单管理</title>
     <script src="../assets/css/tailwindcss.3.4.16.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 12px;
+            color: #3b82f6;
+        }
+        
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .input-field {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+            transition: all 0.2s;
+            height: 32px;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .add-button {
+            padding: 6px 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            height: 32px;
+            white-space: nowrap;
+        }
+        
+        .add-button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .whitelist-container {
+            margin-top: 16px;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        
+        .whitelist-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .whitelist-item:hover {
+            background: #e9ecef;
+            transform: translateX(2px);
+        }
+        
+        .domain-text {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        
+        .remove-button {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fee;
+            color: #dc2626;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .remove-button:hover {
+            background: #dc2626;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.5;
+        }
+    </style>
 </head>
-<body class="w-[300px] m-0 p-5 bg-gray-100 text-gray-800 shadow-lg rounded-lg">
-    <h3 class="text-center text-blue-600">管理白名单</h3>
-    <div class="flex gap-2 my-2.5">
-        <input type="text" id="domainInput" placeholder="输入域名或IP" class="flex-1 p-2 border border-gray-300 rounded shadow-inner" />
-        <button id="addDomainButton" class="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer transition-colors hover:bg-blue-700">添加</button>
-    </div>
+<body>
+    <div class="container">
+        <!-- 标题 -->
+        <div class="header">
+            <svg class="header-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h1 class="header-title">白名单管理</h1>
+        </div>
 
-    <ul id="whitelist" class="list-none p-0 mt-2.5"></ul>
+        <!-- 输入区域 -->
+        <div class="input-group">
+            <input 
+                type="text" 
+                id="domainInput" 
+                class="input-field" 
+                placeholder="输入域名或IP地址（如：example.com 或 192.168.1.1）"
+            />
+            <button id="addDomainButton" class="add-button">
+                ➕ 添加
+            </button>
+        </div>
+
+        <!-- 白名单列表 -->
+        <div class="whitelist-container">
+            <div class="section-title">已添加的域名/IP</div>
+            <div id="whitelist"></div>
+            
+            <!-- 空状态 -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                </svg>
+                <p>暂无白名单项</p>
+                <p style="font-size: 12px; margin-top: 8px;">添加的域名将不会被自动分组</p>
+            </div>
+        </div>
+    </div>
 
     <script src="options.js"></script>
 </body>

@@ -33,10 +33,30 @@ async function loadTLDs() {
 
 // 在后台脚本(background.js)中：
 let globalAliases = null;
+let newTabExtensionId = null;
 
 // 在扩展启动时加载（不仅仅是安装时）
 async function initializeAliases() {
   globalAliases = await loadAliases();
+}
+
+// 检测覆盖新标签页的扩展
+async function detectNewTabExtension() {
+  try {
+    const extensions = await chrome.management.getAll();
+    for (const ext of extensions) {
+      if (ext.enabled && ext.type === 'extension') {
+        // 检查扩展是否覆盖了新标签页
+        // 通过检查扩展的 manifest 中的 chrome_url_overrides
+        // 注意：Management API 不直接提供这个信息，我们需要另一种方法
+        
+        // 简单方法：检查扩展的 homepageUrl 或其他属性
+        // 但最可靠的方法是让用户手动选择
+      }
+    }
+  } catch (error) {
+    console.error('Error detecting new tab extension:', error);
+  }
 }
 
 // 扩展安装时加载
@@ -304,6 +324,14 @@ function getGroupNames() {
 }
 
 /**
+ * 获取扩展白名单
+ * @returns {Promise<Array>}
+ */
+function getExtensionWhitelist() {
+  return getStorageValue('extensionWhitelist', 'sync').then(value => value || []);
+}
+
+/**
  * 获取当前激活的标签页
  * @returns {Promise<chrome.tabs.Tab>}
  */
@@ -420,7 +448,9 @@ async function groupTabs(targetWindowId = null) {
         whitelist,
         groupNames,
         extensionReplaceMap,
-        extensionReplace
+        extensionReplace,
+        extensionWhitelist,
+        enableNewtabGrouping
       ] = await Promise.all([
         chrome.tabs.query({ windowId: window.id }),
         chrome.tabGroups.query({ windowId: window.id }),
@@ -428,7 +458,9 @@ async function groupTabs(targetWindowId = null) {
         getWhitelist(),
         getGroupNames(),
         getExtensionReplaceMap(),
-        getStorageValue('extensionReplace')
+        getStorageValue('extensionReplace'),
+        getExtensionWhitelist(),
+        getStorageValue('enableNewtabGrouping')
       ]);
 
       const { groups, existingGroupsMap } = await processAndGroupTabs(
@@ -439,7 +471,9 @@ async function groupTabs(targetWindowId = null) {
           whitelist,
           groupNames,
           extensionReplaceMap,
-          extensionReplace
+          extensionReplace,
+          extensionWhitelist,
+          enableNewtabGrouping
         }
       );
 
@@ -465,7 +499,7 @@ async function groupTabs(targetWindowId = null) {
  * @returns {Object} 分组结果
  */
 function processAndGroupTabs(tabs, existingGroups, options) {
-  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace } = options;
+  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace, extensionWhitelist, enableNewtabGrouping } = options;
   const groups = {};
   const existingGroupsMap = {};
 
@@ -479,12 +513,14 @@ function processAndGroupTabs(tabs, existingGroups, options) {
     try {
       const url = new URL(tab.url);
 
-      const groupInfo = determineGroupInfo(url, {
+      const groupInfo = determineGroupInfo(url, tab, {
         localIsEnabled,
         whitelist,
         groupNames,
         extensionReplaceMap,
-        extensionReplace
+        extensionReplace,
+        extensionWhitelist,
+        enableNewtabGrouping
       });
 
       if (groupInfo) {
@@ -504,11 +540,14 @@ function processAndGroupTabs(tabs, existingGroups, options) {
 /**
  * 决定标签页的分组信息
  * @param {URL} url - 标签页URL
+ * @param {chrome.tabs.Tab} tab - 标签页对象
  * @param {Object} options - 配置选项
  * @returns {Object|null} 分组信息或null
  */
-function determineGroupInfo(url, options) {
-  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace } = options;
+function determineGroupInfo(url, tab, options) {
+  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace, extensionWhitelist } = options;
+
+
 
   const domainParts = url.hostname.split(".");
   const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(url.hostname);
@@ -523,10 +562,35 @@ function determineGroupInfo(url, options) {
 
   let groupName = targetDomain;
 
+  // 检查特殊页面（如新标签页）
+  // 对于 edge://newtab/ 或 chrome://newtab/
+  if ((url.protocol === 'edge:' || url.protocol === 'chrome:') && url.hostname === 'newtab') {
+    // 如果未开启新标签页分组，则不分组
+    if (!options.enableNewtabGrouping) {
+      return null;
+    }
+    
+    // 如果开启了新标签页分组，但白名单中包含 "newtab"，也不分组
+    if (extensionWhitelist && extensionWhitelist.includes('newtab')) {
+      return null;
+    }
+  }
+
   // 处理扩展页面
-  if (extensionReplace && url.protocol.includes('extension')) {
+  if (url.protocol.includes('extension')) {
     const extensionId = url.hostname;
-    groupName = extensionReplaceMap[extensionId] || extensionId;
+    
+    // 检查扩展白名单（优先检查，独立于 extensionReplace 设置）
+    if (extensionWhitelist && extensionWhitelist.includes(extensionId)) {
+      return null;
+    }
+    
+    // 如果启用了扩展名称替换，使用扩展名称
+    if (extensionReplace) {
+      groupName = extensionReplaceMap[extensionId] || extensionId;
+    } else {
+      groupName = extensionId;
+    }
   } else if (url.protocol === 'edge:' || url.protocol === 'chrome:') {
     // 处理 Edge/Chrome 特殊页面
     if (globalAliases && globalAliases.urlAliasMap) {

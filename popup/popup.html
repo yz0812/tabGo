@@ -5,62 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TabGo</title>
     <script src="../assets/css/tailwindcss.3.4.16.js"></script>
+    <style>
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            margin: 6px 0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+        }
+        .menu-item:hover {
+            background: #f0f7ff;
+            transform: translateX(2px);
+        }
+        .menu-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .section-title {
+            font-size: 12px;
+            color: #999;
+            margin: 16px 0 8px 4px;
+            font-weight: 500;
+        }
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: white;
+            border-radius: 6px;
+        }
+        .toggle-label {
+            font-size: 13px;
+            color: #333;
+        }
+    </style>
 </head>
-<body class="w-[230px] m-0 bg-gray-50 text-gray-800 overflow-x-hidden">
-    <div class="p-4">
-        <h3 class="text-center text-blue-500 text-[22px] mt-1 mb-4">TabGo</h3>
-
-        <button id="quickGroupButton" class="w-full py-2.5 px-4 my-2 bg-blue-500 text-white rounded-lg cursor-pointer font-bold text-sm transition-all hover:bg-blue-600 hover:-translate-y-px">快速分组</button>
-        <a href="../options/options.html" class="block w-full py-2.5 px-4 my-2 bg-transparent text-blue-500 border-2 border-blue-500 rounded-lg text-center no-underline font-bold text-sm transition-all hover:bg-blue-500 hover:text-white">白名单管理</a>
-        <a href="../pages/groupName.html" class="block w-full py-2.5 px-4 my-2 bg-transparent text-blue-500 border-2 border-blue-500 rounded-lg text-center no-underline font-bold text-sm transition-all hover:bg-blue-500 hover:text-white">分组别名管理</a>
-
-        <button id="toggleSettings" class="w-full py-1.5 px-4 mt-2.5 bg-gray-200 text-gray-600 border border-gray-300 rounded-lg cursor-pointer text-xs transition-all hover:bg-gray-300">更多</button>
-
-        <div id="settingsContainer" class="hidden mt-2.5 pb-2.5">
-            <button id="exportButton" class="w-full py-2.5 px-4 my-2 bg-blue-500 text-white rounded-lg cursor-pointer font-bold text-sm transition-all hover:bg-blue-600 hover:-translate-y-px">导出配置</button>
-            <button id="importButton" class="w-full py-2.5 px-4 my-2 bg-blue-500 text-white rounded-lg cursor-pointer font-bold text-sm transition-all hover:bg-blue-600 hover:-translate-y-px">导入配置</button>
-            <input type="file" id="importFile" accept=".json" class="hidden" />
-
-            <div class="flex items-center justify-between my-1.5">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="subdomainToggle" class="peer sr-only" />
-                    <div class="relative w-11 h-[22px] bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[22px]"></div>
-                </label>
-                <span class="text-[13px] text-gray-800">子域名分组</span>
-            </div>
-
-            <div class="flex items-center justify-between my-1.5">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="groupTop" class="peer sr-only" />
-                    <div class="relative w-11 h-[22px] bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[22px]"></div>
-                </label>
-                <span class="text-[13px] text-gray-800">分组在前</span>
-            </div>
-
-            <div class="flex items-center justify-between my-1.5">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="accordion" class="peer sr-only" />
-                    <div class="relative w-11 h-[22px] bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[22px]"></div>
-                </label>
-                <span class="text-[13px] text-gray-800">手风琴模式</span>
-            </div>
-
-            <div class="flex items-center justify-between my-1.5">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="extensionReplace" class="peer sr-only" />
-                    <div class="relative w-11 h-[22px] bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[22px]"></div>
-                </label>
-                <span class="text-[13px] text-gray-800">扩展程序别名</span>
-            </div>
-
-            <div class="flex items-center justify-between my-1.5">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="clearGroupedTabs" class="peer sr-only" />
-                    <div class="relative w-11 h-[22px] bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[22px]"></div>
-                </label>
-                <span class="text-[13px] text-gray-800">启动时关闭分组</span>
-            </div>
+<body class="w-[260px] m-0 bg-gray-50 text-gray-800">
+    <div class="p-3">
+        <!-- 标题 -->
+        <div class="text-center mb-4 pt-2">
+            <h3 class="text-blue-500 text-xl font-bold">TabGo</h3>
         </div>
+
+        <!-- 快速操作 -->
+        <button id="quickGroupButton" class="w-full py-2.5 px-4 bg-blue-500 text-white rounded-lg font-bold text-sm transition-all hover:bg-blue-600 shadow-sm">
+            ⚡ 快速分组
+        </button>
+
+        <!-- 管理菜单 -->
+        <div class="section-title">管理</div>
+        <a href="../options/options.html" class="menu-item">
+            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>白名单</span>
+        </a>
+        <a href="../pages/groupName.html" class="menu-item">
+            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+            </svg>
+            <span>分组别名</span>
+        </a>
+        <a href="../pages/extensions.html" class="menu-item">
+            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            <span>扩展白名单</span>
+        </a>
+
+        <!-- 设置 -->
+        <div class="section-title">设置</div>
+        <div class="toggle-row">
+            <span class="toggle-label">子域名分组</span>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="subdomainToggle" class="peer sr-only" />
+                <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <span class="toggle-label">分组在前</span>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="groupTop" class="peer sr-only" />
+                <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <span class="toggle-label">手风琴模式</span>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="accordion" class="peer sr-only" />
+                <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <span class="toggle-label">扩展程序别名</span>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="extensionReplace" class="peer sr-only" />
+                <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <span class="toggle-label">新标签页分组</span>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="enableNewtabGrouping" class="peer sr-only" />
+                <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <span class="toggle-label">启动时关闭分组</span>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="clearGroupedTabs" class="peer sr-only" />
+                <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+            </label>
+        </div>
+
+        <!-- 数据管理 -->
+        <div class="section-title">数据</div>
+        <button id="exportButton" class="menu-item w-full">
+            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            <span>导出配置</span>
+        </button>
+        <button id="importButton" class="menu-item w-full">
+            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
+            <span>导入配置</span>
+        </button>
+        <input type="file" id="importFile" accept=".json" class="hidden" />
     </div>
     <script src="popup.js"></script>
 </body>

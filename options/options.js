@@ -29,27 +29,36 @@ function refreshWhitelist() {
   chrome.storage.sync.get(["whitelist"], (result) => {
     const whitelist = result.whitelist || [];
     const listElement = document.getElementById("whitelist");
+    const emptyState = document.getElementById("emptyState");
+    
     listElement.innerHTML = "";
 
+    if (whitelist.length === 0) {
+      emptyState.style.display = "block";
+      return;
+    }
+
+    emptyState.style.display = "none";
+
     whitelist.forEach((domain, index) => {
-      const li = document.createElement("li");
-      li.className = "flex items-center justify-between px-3 py-1.5 my-1 bg-white rounded shadow-sm";
+      const item = document.createElement("div");
+      item.className = "whitelist-item";
 
       const domainText = document.createElement("span");
       domainText.textContent = domain;
-      domainText.className = "flex-1 text-gray-800";
+      domainText.className = "domain-text";
 
-      const removeIcon = document.createElement("span");
-      removeIcon.textContent = "×";
-      removeIcon.className = "text-2xl text-red-500 cursor-pointer hover:text-red-700 transition-colors ml-2";
-      removeIcon.onclick = () => {
+      const removeButton = document.createElement("button");
+      removeButton.textContent = "×";
+      removeButton.className = "remove-button";
+      removeButton.onclick = () => {
         whitelist.splice(index, 1);
         chrome.storage.sync.set({ whitelist }, refreshWhitelist);
       };
 
-      li.appendChild(domainText);
-      li.appendChild(removeIcon);
-      listElement.appendChild(li);
+      item.appendChild(domainText);
+      item.appendChild(removeButton);
+      listElement.appendChild(item);
     });
   });
 }

@@ -72,16 +72,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
 });
 
 
-document.getElementById('toggleSettings').addEventListener('click', function() {
-  var settingsContainer = document.getElementById('settingsContainer');
-  if (settingsContainer.style.display === 'none' || settingsContainer.style.display === '') {
-    settingsContainer.style.display = 'block';
-    this.textContent = '收起';
-  } else {
-    settingsContainer.style.display = 'none';
-    this.textContent = '更多';
-  }
-});
+
 
 document.addEventListener("DOMContentLoaded", function () {
   const toggle = document.getElementById("subdomainToggle");
@@ -160,6 +151,23 @@ document.addEventListener("DOMContentLoaded", function () {
     chrome.storage.local.set({ extensionReplace: isEnabled }, function () {
       //  console.log('Subdomain toggle state saved:', isEnabled);
     });
+  });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  const toggle = document.getElementById("enableNewtabGrouping");
+
+  // 从 chrome.storage.local 中读取开关状态
+  chrome.storage.local.get(["enableNewtabGrouping"], function (result) {
+    if (result.enableNewtabGrouping !== undefined) {
+      toggle.checked = result.enableNewtabGrouping; // 根据存储的值设置 toggle 的初始状态
+    }
+  });
+
+  // 当 toggle 开关状态改变时，将新状态写入 chrome.storage.local
+  toggle.addEventListener("change", function () {
+    const isEnabled = toggle.checked; // 获取当前开关状态
+    chrome.storage.local.set({ enableNewtabGrouping: isEnabled }, function () {});
   });
 });
 

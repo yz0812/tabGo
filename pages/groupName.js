@@ -30,51 +30,75 @@ function refreshGroupNameList() {
     chrome.storage.sync.get(["groupNames"], (result) => {
         const groupNames = result.groupNames || {};
         const listElement = document.getElementById("groupNameList");
+        const emptyState = document.getElementById("emptyState");
+        
         listElement.innerHTML = "";
+
+        // 检查是否为空
+        if (Object.keys(groupNames).length === 0) {
+            emptyState.style.display = "block";
+            return;
+        }
+
+        emptyState.style.display = "none";
 
         for (const [groupName, domains] of Object.entries(groupNames)) {
             const groupLi = document.createElement("li");
-            groupLi.className = "bg-white mb-2.5 rounded-lg border border-gray-100 overflow-hidden";
+            groupLi.className = "group-item";
 
-            const groupTitle = document.createElement("strong");
-            groupTitle.className = "flex items-center px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-gray-50 before:content-[''] before:w-0 before:h-0 before:border-t-[4px] before:border-t-transparent before:border-b-[4px] before:border-b-transparent before:border-l-[6px] before:border-l-gray-400 before:mr-2.5 before:transition-transform";
-            groupTitle.textContent = groupName;
-            groupTitle.onclick = () => {
+            const groupHeader = document.createElement("div");
+            groupHeader.className = "group-header";
+            groupHeader.onclick = () => {
                 groupLi.classList.toggle("expanded");
             };
 
-            const groupDeleteIcon = document.createElement("span");
-            groupDeleteIcon.textContent = "✕";
-            groupDeleteIcon.className = "text-red-500 cursor-pointer text-lg ml-auto hover:text-red-700";
-            groupDeleteIcon.onclick = (e) => {
+            const expandIcon = document.createElement("div");
+            expandIcon.className = "expand-icon";
+            groupHeader.appendChild(expandIcon);
+
+            const groupNameSpan = document.createElement("span");
+            groupNameSpan.className = "group-name";
+            groupNameSpan.textContent = groupName;
+            groupHeader.appendChild(groupNameSpan);
+
+            const domainCount = document.createElement("span");
+            domainCount.className = "domain-count";
+            domainCount.textContent = `(${domains.length})`;
+            groupHeader.appendChild(domainCount);
+
+            const groupDeleteButton = document.createElement("button");
+            groupDeleteButton.textContent = "×";
+            groupDeleteButton.className = "remove-button";
+            groupDeleteButton.style.marginLeft = "8px";
+            groupDeleteButton.onclick = (e) => {
                 e.stopPropagation();
                 if (confirm(`确定要删除分组"${groupName}"吗？`)) {
                     removeGroup(groupName);
                 }
             };
-            groupTitle.appendChild(groupDeleteIcon);
+            groupHeader.appendChild(groupDeleteButton);
 
-            groupLi.appendChild(groupTitle);
+            groupLi.appendChild(groupHeader);
 
             const domainList = document.createElement("div");
-            domainList.className = "domain-list hidden p-2 bg-gray-50 border-t border-gray-100";
+            domainList.className = "domain-list";
 
             domains.forEach(domain => {
                 const domainItem = document.createElement("div");
-                domainItem.className = "flex items-center px-2.5 py-1.5 mb-1 rounded bg-white/50 hover:bg-white/80 transition-colors";
+                domainItem.className = "domain-item";
 
                 const domainText = document.createElement("span");
-                domainText.className = "flex-1 text-sm text-gray-700 break-all";
+                domainText.className = "domain-text";
                 domainText.textContent = domain;
                 domainItem.appendChild(domainText);
 
-                const removeIcon = document.createElement("span");
-                removeIcon.textContent = "✕";
-                removeIcon.className = "text-gray-300 cursor-pointer text-base ml-2 hover:text-red-500";
-                removeIcon.onclick = () => {
+                const removeButton = document.createElement("button");
+                removeButton.textContent = "×";
+                removeButton.className = "remove-button";
+                removeButton.onclick = () => {
                     removeDomainFromGroup(groupName, domain);
                 };
-                domainItem.appendChild(removeIcon);
+                domainItem.appendChild(removeButton);
                 domainList.appendChild(domainItem);
             });
 
