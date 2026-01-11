@@ -246,5 +246,269 @@
     {
       "domain": "edge://password-manager",
       "name": "密码管理器"
+    },
+    {
+      "domain": "chrome://about",
+      "name": "关于页面列表"
+    },
+    {
+      "domain": "chrome://blob-internals",
+      "name": "Blob内部信息"
+    },
+    {
+      "domain": "chrome://webrtc-internals",
+      "name": "WebRTC内部信息"
+    },
+    {
+      "domain": "chrome://webrtc-logs",
+      "name": "WebRTC日志"
+    },
+    {
+      "domain": "chrome://signin-internals",
+      "name": "登录内部信息"
+    },
+    {
+      "domain": "chrome://translate-internals",
+      "name": "翻译内部信息"
+    },
+    {
+      "domain": "chrome://user-actions",
+      "name": "用户操作日志"
+    },
+    {
+      "domain": "chrome://omnibox",
+      "name": "地址栏调试"
+    },
+    {
+      "domain": "chrome://tracing",
+      "name": "性能追踪"
+    },
+    {
+      "domain": "chrome://histograms",
+      "name": "直方图统计"
+    },
+    {
+      "domain": "chrome://local-state",
+      "name": "本地状态"
+    },
+    {
+      "domain": "chrome://prefs-internals",
+      "name": "首选项内部信息"
+    },
+    {
+      "domain": "chrome://print",
+      "name": "打印预览"
+    },
+    {
+      "domain": "chrome://sandbox",
+      "name": "沙盒状态"
+    },
+    {
+      "domain": "chrome://system",
+      "name": "系统信息"
+    },
+    {
+      "domain": "chrome://credits",
+      "name": "开源致谢"
+    },
+    {
+      "domain": "chrome://terms",
+      "name": "服务条款"
+    },
+    {
+      "domain": "chrome://web-app-internals",
+      "name": "Web应用内部信息"
+    },
+    {
+      "domain": "chrome://network-errors",
+      "name": "网络错误列表"
+    },
+    {
+      "domain": "chrome://ukm",
+      "name": "UKM指标"
+    },
+    {
+      "domain": "chrome://profile-internals",
+      "name": "配置文件内部信息"
+    },
+    {
+      "domain": "chrome://autofill-internals",
+      "name": "自动填充内部信息"
+    },
+    {
+      "domain": "chrome://topics-internals",
+      "name": "Topics API内部信息"
+    },
+    {
+      "domain": "chrome://attribution-internals",
+      "name": "归因内部信息"
+    },
+    {
+      "domain": "chrome://private-aggregation-internals",
+      "name": "私有聚合内部信息"
+    },
+    {
+      "domain": "chrome://optimization-guide-internals",
+      "name": "优化指南内部信息"
+    },
+    {
+      "domain": "chrome://gcm-internals",
+      "name": "GCM推送内部信息"
+    },
+    {
+      "domain": "chrome://sync-internals",
+      "name": "同步内部信息"
+    },
+    {
+      "domain": "chrome://invalidations",
+      "name": "失效服务"
+    },
+    {
+      "domain": "chrome://discards",
+      "name": "丢弃的标签页"
+    },
+    {
+      "domain": "edge://about",
+      "name": "关于页面列表"
+    },
+    {
+      "domain": "edge://wallet",
+      "name": "微软钱包"
+    },
+    {
+      "domain": "edge://collections",
+      "name": "集锦"
+    },
+    {
+      "domain": "edge://surf",
+      "name": "冲浪游戏"
+    },
+    {
+      "domain": "edge://whats-new",
+      "name": "新功能介绍"
+    },
+    {
+      "domain": "edge://credits",
+      "name": "开源致谢"
+    },
+    {
+      "domain": "edge://terms",
+      "name": "服务条款"
+    },
+    {
+      "domain": "edge://tracing",
+      "name": "性能追踪"
+    },
+    {
+      "domain": "edge://webrtc-internals",
+      "name": "WebRTC内部信息"
+    },
+    {
+      "domain": "edge://translate-internals",
+      "name": "翻译内部信息"
+    },
+    {
+      "domain": "edge://omnibox",
+      "name": "地址栏调试"
+    },
+    {
+      "domain": "edge://signin-internals",
+      "name": "登录内部信息"
+    },
+    {
+      "domain": "edge://histograms",
+      "name": "直方图统计"
+    },
+    {
+      "domain": "edge://local-state",
+      "name": "本地状态"
+    },
+    {
+      "domain": "edge://prefs-internals",
+      "name": "首选项内部信息"
+    },
+    {
+      "domain": "edge://network-errors",
+      "name": "网络错误列表"
+    },
+    {
+      "domain": "edge://blob-internals",
+      "name": "Blob内部信息"
+    },
+    {
+      "domain": "edge://print",
+      "name": "打印预览"
+    },
+    {
+      "domain": "edge://sandbox",
+      "name": "沙盒状态"
+    },
+    {
+      "domain": "edge://user-actions",
+      "name": "用户操作日志"
+    },
+    {
+      "domain": "edge://profile-internals",
+      "name": "配置文件内部信息"
+    },
+    {
+      "domain": "edge://rewards",
+      "name": "微软奖励"
+    },
+    {
+      "domain": "edge://web-app-internals",
+      "name": "Web应用内部信息"
+    },
+    {
+      "domain": "edge://autofill-internals",
+      "name": "自动填充内部信息"
+    },
+    {
+      "domain": "edge://sync-internals",
+      "name": "同步内部信息"
+    },
+    {
+      "domain": "edge://gcm-internals",
+      "name": "GCM推送内部信息"
+    },
+    {
+      "domain": "edge://invalidations",
+      "name": "失效服务"
+    },
+    {
+      "domain": "edge://ukm",
+      "name": "UKM指标"
+    },
+    {
+      "domain": "edge://topics-internals",
+      "name": "Topics API内部信息"
+    },
+    {
+      "domain": "edge://optimization-guide-internals",
+      "name": "优化指南内部信息"
+    },
+    {
+      "domain": "edge://private-aggregation-internals",
+      "name": "私有聚合内部信息"
+    },
+    {
+      "domain": "edge://attribution-internals",
+      "name": "归因内部信息"
+    },
+    {
+      "domain": "edge://webrtc-logs",
+      "name": "WebRTC日志"
+    },
+    {
+      "domain": "edge://copilot",
+      "name": "Copilot助手"
+    },
+    {
+      "domain": "edge://drop",
+      "name": "投放功能"
+    },
+    {
+      "domain": "edge://workspaces",
+      "name": "工作区"
     }
   ]

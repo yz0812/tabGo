@@ -188,3 +188,20 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+  const select = document.getElementById("groupSortMode");
+
+  // 从 chrome.storage.local 中读取排序模式
+  chrome.storage.local.get(["groupSortMode"], function (result) {
+    if (result.groupSortMode !== undefined) {
+      select.value = result.groupSortMode;
+    }
+  });
+
+  // 当选择改变时，将新状态写入 chrome.storage.local
+  select.addEventListener("change", function () {
+    const mode = select.value;
+    chrome.storage.local.set({ groupSortMode: mode }, function () {});
+  });
+});
+

@@ -25,9 +25,9 @@ async function loadTLDs() {
       .map(line => line.trim())
       .filter(line => line && !line.startsWith('//'));
     
-    console.log(`Loaded ${commonTLDs.length} TLDs`);
+    console.log(`已加载 ${commonTLDs.length} 个顶级域名`);
   } catch (error) {
-    console.error('Error loading TLDs:', error);
+    console.error('加载顶级域名列表失败:', error);
   }
 }
 
@@ -55,7 +55,7 @@ async function detectNewTabExtension() {
       }
     }
   } catch (error) {
-    console.error('Error detecting new tab extension:', error);
+    console.error('检测新标签页扩展失败:', error);
   }
 }
 
@@ -79,7 +79,7 @@ async function loadAliases() {
       urlAliasMap   // Map对象，用于快速查找
     };
   } catch (error) {
-    console.error('Error loading aliases.json:', error);
+    console.error('加载 aliases.json 失败:', error);
     return {
       aliases: [],
       urlAliasMap: new Map()
@@ -154,8 +154,9 @@ function handleStorageChange(changes) {
       groupTabs();
     },
     groupTop: newValue => {
-      if (newValue) reorderTabsAndGroups();
+      if (newValue) groupTabs();
     },
+    groupSortMode: () => groupTabs(),
     groupNames: () => groupTabs(),
     accordion: handleAccordionChange,
     extensionReplace: newValue => extensionReplace(newValue)
@@ -238,7 +239,7 @@ function handleSendMessageError(error) {
   });
 
   // 记录错误
-  console.error('Message sending error:', error);
+    console.error('消息发送失败:', error);
 }
 
 
@@ -289,6 +290,52 @@ function getSubdomainEnabled() {
  */
 function getGroupTop() {
   return getStorageValue('groupTop').then(value => value || false);
+}
+
+/**
+ * 获取分组排序模式
+ * @returns {Promise<string>} 'default' | 'name' | 'time'
+ */
+function getGroupSortMode() {
+  return getStorageValue('groupSortMode').then(value => value || 'default');
+}
+
+/**
+ * 获取字符类型优先级（用于分组名称排序）
+ * @param {string} char - 首字符
+ * @returns {number} 优先级：0=中文，1=英文，2=数字，3=其他
+ */
+function getCharTypePriority(char) {
+  if (!char) return 3;
+  const code = char.charCodeAt(0);
+  // 中文字符范围
+  if (code >= 0x4e00 && code <= 0x9fff) return 0;
+  // 英文字母
+  if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) return 1;
+  // 数字
+  if (code >= 48 && code <= 57) return 2;
+  // 其他
+  return 3;
+}
+
+/**
+ * 分组名称比较函数
+ * 排序规则：中文 > 英文 > 数字 > 其他，同类按首字母/拼音排序
+ * @param {string} a - 分组名称A
+ * @param {string} b - 分组名称B
+ * @returns {number} 比较结果
+ */
+function compareGroupNames(a, b) {
+  const priorityA = getCharTypePriority(a.charAt(0));
+  const priorityB = getCharTypePriority(b.charAt(0));
+
+  // 不同类型按优先级排序
+  if (priorityA !== priorityB) {
+    return priorityA - priorityB;
+  }
+
+  // 同类型使用 localeCompare 进行排序（支持中文拼音排序）
+  return a.localeCompare(b, 'zh-CN');
 }
 
 /**
@@ -414,7 +461,7 @@ async function ungroupAllTabs() {
     .filter(tab => tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE)
     .map(tab => 
       chrome.tabs.ungroup(tab.id).catch(err => 
-        console.error(`Error ungrouping tab ${tab.id}:`, err)
+        console.error(`取消标签页 ${tab.id} 分组失败:`, err)
       )
     );
   
@@ -463,8 +510,13 @@ async function groupTabs(targetWindowId = null) {
         getStorageValue('enableNewtabGrouping')
       ]);
 
+      const [groupTop, groupSortMode] = await Promise.all([
+        getGroupTop(),
+        getGroupSortMode()
+      ]);
+
       const { groups, existingGroupsMap } = await processAndGroupTabs(
-        tabs, 
+        tabs,
         tabGroups,
         {
           localIsEnabled,
@@ -477,17 +529,17 @@ async function groupTabs(targetWindowId = null) {
         }
       );
 
-      // 【关键修改】将 window.id 传递给 updateTabGroups
-      await updateTabGroups(groups, existingGroupsMap, window.id);
-      
-      const groupTop = await getGroupTop();
-      if (groupTop) {
-        await reorderTabsAndGroups(window.id);
+      // 【关键修改】将 window.id 和 sortMode 传递给 updateTabGroups
+      await updateTabGroups(groups, existingGroupsMap, window.id, groupSortMode);
+
+      // 如果开启了分组在前，或者设置了名称排序模式
+      if (groupTop || groupSortMode === 'name') {
+        await reorderTabsAndGroups(window.id, groupSortMode);
       }
     }
 
   } catch (error) {
-    console.error("Error in groupTabs:", error);
+    console.error("标签页分组失败:", error);
   }
 }
 
@@ -530,7 +582,7 @@ function processAndGroupTabs(tabs, existingGroups, options) {
         groups[groupInfo.name].push(tab);
       }
     } catch (e) {
-      console.error("Error processing tab:", tab.url, e);
+      console.error("处理标签页失败:", tab.url, e);
     }
   });
 
@@ -661,8 +713,10 @@ function processDomainName(groupName) {
  * 更新标签组
  * @param {Object} groups - 分组对象
  * @param {Object} existingGroupsMap - 现有分组映射
+ * @param {number} windowId - 窗口ID
+ * @param {string} sortMode - 排序模式
  */
-async function updateTabGroups(groups, existingGroupsMap, windowId) {
+async function updateTabGroups(groups, existingGroupsMap, windowId, sortMode = 'default') {
   for (const [groupName, groupTabs] of Object.entries(groups)) {
     if (groupTabs.length <= 1) {
       if (groupTabs.length === 1) {
@@ -672,7 +726,7 @@ async function updateTabGroups(groups, existingGroupsMap, windowId) {
     }
 
     const tabIds = groupTabs.map(tab => tab.id);
-    
+
     if (existingGroupsMap[groupName]) {
       // 更新现有分组
       await chrome.tabs.group({
@@ -683,13 +737,18 @@ async function updateTabGroups(groups, existingGroupsMap, windowId) {
       // 创建新分组
       // 【关键修复】：显式指定 createProperties: { windowId }
       // 这强制浏览器在指定窗口创建新组，而不是合并到其他窗口的同名组
-      const groupId = await chrome.tabs.group({ 
+      const groupId = await chrome.tabs.group({
         tabIds,
-        createProperties: { windowId: windowId } 
+        createProperties: { windowId: windowId }
       }).catch(console.error);
 
       if (groupId) {
         await chrome.tabGroups.update(groupId, { title: groupName }).catch(console.error);
+
+        // 追加模式：新创建的分组移动到最后
+        if (sortMode === 'append') {
+          await chrome.tabGroups.move(groupId, { index: -1 }).catch(console.error);
+        }
       }
     }
   }
@@ -697,59 +756,68 @@ async function updateTabGroups(groups, existingGroupsMap, windowId) {
 
 /**
  * 重新排序标签页和分组，确保分组在固定标签页之后，未分组标签在最后
+ * @param {number} windowId - 窗口ID
+ * @param {string} sortMode - 排序模式: 'default' | 'name' | 'append'
  * @returns {Promise<void>}
  */
-async function reorderTabsAndGroups(windowId) {
+async function reorderTabsAndGroups(windowId, sortMode = 'default') {
   try {
+    // 默认模式和追加模式不需要重新排序（追加模式在 updateTabGroups 中已处理）
+    if (sortMode === 'default' || sortMode === 'append') {
+      return;
+    }
+
     // 使用传入的 windowId 而不是获取当前窗口
     const window = await chrome.windows.get(windowId, { populate: true });
-    
+
     // 获取指定窗口的所有标签页
     const allTabs = await chrome.tabs.query({ windowId: windowId });
-    
+
     const pinnedTabsCount = allTabs.filter(tab => tab.pinned).length;
-    
+
     // 获取指定窗口的所有标签组
     const allGroups = await chrome.tabGroups.query({ windowId: windowId });
-    
-    // 其余代码保持不变...
-    allGroups.sort((a, b) => a.id - b.id);
-    
+
+    // 名称排序：中文 > 英文 > 数字 > 其他
+    if (sortMode === 'name') {
+      allGroups.sort((a, b) => compareGroupNames(a.title || '', b.title || ''));
+    }
+
     let currentIndex = pinnedTabsCount;
-    
+
     for (const group of allGroups) {
       const groupTabs = await chrome.tabs.query({
         windowId: windowId,
         groupId: group.id,
         pinned: false
       });
-      
+
       if (groupTabs.length > 0) {
         await chrome.tabGroups.move(group.id, { index: currentIndex });
-        
+
         for (const tab of groupTabs) {
           await chrome.tabs.move(tab.id, { index: currentIndex });
           currentIndex++;
         }
       }
     }
-    
+
     const ungroupedTabs = await chrome.tabs.query({
       windowId: windowId,
       groupId: chrome.tabGroups.TAB_GROUP_ID_NONE,
       pinned: false
     });
-    
-    const movePromises = ungroupedTabs.map(tab => 
+
+    const movePromises = ungroupedTabs.map(tab =>
       chrome.tabs.move(tab.id, { index: -1 })
-        .catch(err => console.error(`Error moving ungrouped tab ${tab.id}:`, err))
+        .catch(err => console.error(`移动未分组标签页 ${tab.id} 失败:`, err))
     );
-    
+
     await Promise.all(movePromises);
-    
-    console.log('Reordering completed successfully');
+
+    console.log('标签页排序完成');
   } catch (error) {
-    console.error("Error in reorderTabsAndGroups:", error);
+    console.error("标签页排序失败:", error);
   }
 }
 
@@ -770,7 +838,7 @@ async function expandAllTabGroups() {
     await Promise.all(expandPromises);
     return `已尝试展开 ${groups.length} 个标签组`;
   } catch (error) {
-    console.error("Error in expandAllTabGroups:", error);
+    console.error("展开所有标签组失败:", error);
     throw error;
   }
 }
@@ -812,12 +880,12 @@ async function collapseOtherTabGroups(currentTab) {
     const collapsePromises = groups
       .filter(group => group.id !== currentTab.groupId && !group.collapsed)
       .map(group => collapseTabGroup(group.id).catch(err => {
-        console.error(`Error collapsing group ${group.id}:`, err);
+        console.error(`折叠标签组 ${group.id} 失败:`, err);
       }));
     
     await Promise.all(collapsePromises);
   } catch (error) {
-    console.error("Error in collapseOtherTabGroups:", error);
+    console.error("折叠其他标签组失败:", error);
   }
 }
 
@@ -880,7 +948,7 @@ const errorHandler = {
    * @param {string} context - 错误上下文
    */
   logError: function(error, context) {
-    console.error(`Error in ${context}:`, error);
+    console.error(`${context} 执行出错:`, error);
   }
 };
 
@@ -908,9 +976,9 @@ async function clearGroupedTabs() {
       }
 
       await Promise.all(closeTabPromises);
-      console.log("All grouped tabs closed on window open.");
+      console.log("窗口打开时已关闭所有分组标签页");
     } catch (error) {
-      console.error("Error removing grouped tabs on window open:", error);
+      console.error("窗口打开时关闭分组标签页失败:", error);
     }
   
 }

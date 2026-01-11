@@ -109,7 +109,7 @@ async function renderExtensions() {
     });
 
   } catch (error) {
-    console.error('Error rendering extensions:', error);
+    console.error('渲染扩展列表失败:', error);
   }
 }
 
