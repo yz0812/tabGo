@@ -2,6 +2,43 @@ document.getElementById("quickGroupButton").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "quickGroup" });
 });
 
+// 折叠/展开功能
+function setupCollapsible(toggleId, contentId, storageKey, defaultExpanded = false) {
+  const toggle = document.getElementById(toggleId);
+  const content = document.getElementById(contentId);
+  const arrow = toggle.querySelector('.section-arrow');
+
+  // 从 storage 读取折叠状态
+  chrome.storage.local.get([storageKey], (result) => {
+    // 如果没有存储值，使用默认状态
+    const isCollapsed = result[storageKey] !== undefined ? result[storageKey] : !defaultExpanded;
+    if (!isCollapsed) {
+      content.classList.remove('collapsed');
+      arrow.classList.remove('collapsed');
+    } else {
+      content.classList.add('collapsed');
+      arrow.classList.add('collapsed');
+    }
+  });
+
+  // 点击切换折叠状态
+  toggle.addEventListener('click', () => {
+    const isCollapsed = content.classList.toggle('collapsed');
+    arrow.classList.toggle('collapsed');
+
+    // 保存状态
+    chrome.storage.local.set({ [storageKey]: isCollapsed });
+  });
+}
+
+// 初始化折叠功能
+document.addEventListener("DOMContentLoaded", () => {
+  setupCollapsible('manageToggle', 'manageContent', 'manageCollapsed', true); // 默认展开
+  setupCollapsible('settingsToggle', 'settingsContent', 'settingsCollapsed', false); // 默认折叠
+  setupCollapsible('dataToggle', 'dataContent', 'dataCollapsed', false); // 默认折叠
+});
+
+
 // 导出配置
 document.getElementById("exportButton").addEventListener("click", () => {
   chrome.storage.sync.get(["whitelist", "groupNames"], (result) => {

@@ -16,6 +16,15 @@ chrome.runtime.onMessage.addListener(handleMessage);
 // 域名后缀
 let commonTLDs = [];
 
+// 防抖状态管理
+const pendingGroupTabs = new Map(); // windowId -> timeoutId
+const DEBOUNCE_DELAY = 150; // 毫秒
+
+// 配置缓存
+let configCache = null;
+let configCacheTime = 0;
+const CONFIG_CACHE_TTL = 5000; // 5秒缓存有效期
+
 // 在扩展启动时加载域名列表
 async function loadTLDs() {
   try {
@@ -92,6 +101,27 @@ loadTLDs();
 initializeAliases();
 
 /**
+ * 防抖包装的 groupTabs
+ * @param {number|null} windowId - 窗口ID
+ */
+function debouncedGroupTabs(windowId) {
+  const key = windowId || 'all';
+
+  // 清除该窗口已有的待执行任务
+  if (pendingGroupTabs.has(key)) {
+    clearTimeout(pendingGroupTabs.get(key));
+  }
+
+  // 设置新的延迟执行
+  const timeoutId = setTimeout(() => {
+    pendingGroupTabs.delete(key);
+    groupTabs(windowId);
+  }, DEBOUNCE_DELAY);
+
+  pendingGroupTabs.set(key, timeoutId);
+}
+
+/**
  * 初始化右键菜单
  */
 function initializeContextMenus() {
@@ -115,8 +145,8 @@ function initializeContextMenus() {
  */
 function handleTabUpdate(tabId, changeInfo, tab) {
   if (changeInfo.status === "complete") {
-    // tab 对象包含 windowId，直接传给 groupTabs
-    groupTabs(tab.windowId);
+    // tab 对象包含 windowId，直接传给 debouncedGroupTabs
+    debouncedGroupTabs(tab.windowId);
   }
 }
 
@@ -139,7 +169,7 @@ function handleTabActivation(activeInfo) {
 function handleTabRemoval(tabId, removeInfo) {
   if (!removeInfo.isWindowClosing) {
     // removeInfo 包含 windowId
-    groupTabs(removeInfo.windowId);
+    debouncedGroupTabs(removeInfo.windowId);
   }
 }
 
@@ -148,6 +178,9 @@ function handleTabRemoval(tabId, removeInfo) {
  * @param {object} changes - 变更对象
  */
 function handleStorageChange(changes) {
+  // 任何配置变更都使缓存失效
+  invalidateConfigCache();
+
   const handlers = {
     subdomainEnabled: () => {
       ungroupAllTabs();
@@ -379,6 +412,80 @@ function getExtensionWhitelist() {
 }
 
 /**
+ * 获取所有配置（带缓存）
+ * @param {boolean} forceRefresh - 强制刷新缓存
+ * @returns {Promise<Object>} 配置对象
+ */
+async function getAllConfig(forceRefresh = false) {
+  const now = Date.now();
+
+  // 缓存有效，直接返回
+  if (!forceRefresh && configCache && (now - configCacheTime) < CONFIG_CACHE_TTL) {
+    return configCache;
+  }
+
+  // 并行读取所有配置（合并原来的两个 Promise.all）
+  const [
+    subdomainEnabled,
+    groupTop,
+    groupSortMode,
+    extensionReplaceMap,
+    extensionReplace,
+    enableNewtabGrouping,
+    whitelist,
+    groupNames,
+    extensionWhitelist
+  ] = await Promise.all([
+    getSubdomainEnabled(),
+    getGroupTop(),
+    getGroupSortMode(),
+    getExtensionReplaceMap(),
+    getStorageValue('extensionReplace'),
+    getStorageValue('enableNewtabGrouping'),
+    getWhitelist(),
+    getGroupNames(),
+    getExtensionWhitelist()
+  ]);
+
+  // 预处理白名单为 Set（用于快速查找）
+  const whitelistSet = new Set(whitelist);
+
+  // 预处理 groupNames：构建 domain -> groupName 的反向映射
+  const domainToGroupName = new Map();
+  for (const [groupName, domains] of Object.entries(groupNames)) {
+    for (const domain of domains) {
+      domainToGroupName.set(domain, groupName);
+    }
+  }
+
+  configCache = {
+    subdomainEnabled,
+    groupTop,
+    groupSortMode,
+    extensionReplaceMap,
+    extensionReplace,
+    enableNewtabGrouping,
+    whitelist,
+    groupNames,
+    extensionWhitelist,
+    // 预处理的数据结构
+    whitelistSet,
+    domainToGroupName
+  };
+  configCacheTime = now;
+
+  return configCache;
+}
+
+/**
+ * 使缓存失效（在 storage.onChanged 时调用）
+ */
+function invalidateConfigCache() {
+  configCache = null;
+  configCacheTime = 0;
+}
+
+/**
  * 获取当前激活的标签页
  * @returns {Promise<chrome.tabs.Tab>}
  */
@@ -475,66 +582,48 @@ async function ungroupAllTabs() {
  */
 async function groupTabs(targetWindowId = null) {
   try {
+    // 一次性获取所有配置（带缓存）
+    const config = await getAllConfig();
+
     let windows = [];
-    
+
     if (targetWindowId) {
       // 如果指定了窗口，只处理这一个
-      // 我们构造一个包含 id 的对象即可，不需要完整的 window 对象
       windows = [{ id: targetWindowId }];
     } else {
       // 只有在初始化或更改全局设置时，才处理所有窗口
       windows = await chrome.windows.getAll();
     }
-    
+
     // 对每个窗口单独处理
     for (const window of windows) {
-      const [
-        tabs,
-        tabGroups,
-        localIsEnabled,
-        whitelist,
-        groupNames,
-        extensionReplaceMap,
-        extensionReplace,
-        extensionWhitelist,
-        enableNewtabGrouping
-      ] = await Promise.all([
+      const [tabs, tabGroups] = await Promise.all([
         chrome.tabs.query({ windowId: window.id }),
-        chrome.tabGroups.query({ windowId: window.id }),
-        getSubdomainEnabled(),
-        getWhitelist(),
-        getGroupNames(),
-        getExtensionReplaceMap(),
-        getStorageValue('extensionReplace'),
-        getExtensionWhitelist(),
-        getStorageValue('enableNewtabGrouping')
-      ]);
-
-      const [groupTop, groupSortMode] = await Promise.all([
-        getGroupTop(),
-        getGroupSortMode()
+        chrome.tabGroups.query({ windowId: window.id })
       ]);
 
       const { groups, existingGroupsMap } = await processAndGroupTabs(
         tabs,
         tabGroups,
         {
-          localIsEnabled,
-          whitelist,
-          groupNames,
-          extensionReplaceMap,
-          extensionReplace,
-          extensionWhitelist,
-          enableNewtabGrouping
+          localIsEnabled: config.subdomainEnabled,
+          whitelist: config.whitelist,
+          groupNames: config.groupNames,
+          extensionReplaceMap: config.extensionReplaceMap,
+          extensionReplace: config.extensionReplace,
+          extensionWhitelist: config.extensionWhitelist,
+          enableNewtabGrouping: config.enableNewtabGrouping,
+          // 传递预处理的数据结构
+          whitelistSet: config.whitelistSet,
+          domainToGroupName: config.domainToGroupName
         }
       );
 
-      // 【关键修改】将 window.id 和 sortMode 传递给 updateTabGroups
-      await updateTabGroups(groups, existingGroupsMap, window.id, groupSortMode);
+      await updateTabGroups(groups, existingGroupsMap, window.id, config.groupSortMode);
 
       // 如果开启了分组在前，或者设置了名称排序模式
-      if (groupTop || groupSortMode === 'name') {
-        await reorderTabsAndGroups(window.id, groupSortMode);
+      if (config.groupTop || config.groupSortMode === 'name') {
+        await reorderTabsAndGroups(window.id, config.groupSortMode, config.groupTop);
       }
     }
 
@@ -590,26 +679,44 @@ function processAndGroupTabs(tabs, existingGroups, options) {
 }
 
 /**
- * 决定标签页的分组信息
+ * 决定标签页的分组信息（优化版）
  * @param {URL} url - 标签页URL
  * @param {chrome.tabs.Tab} tab - 标签页对象
  * @param {Object} options - 配置选项
  * @returns {Object|null} 分组信息或null
  */
 function determineGroupInfo(url, tab, options) {
-  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace, extensionWhitelist } = options;
-
-
+  const {
+    localIsEnabled,
+    whitelist,
+    groupNames,
+    extensionReplaceMap,
+    extensionReplace,
+    extensionWhitelist,
+    // 使用预处理的数据结构
+    whitelistSet,
+    domainToGroupName
+  } = options;
 
   const domainParts = url.hostname.split(".");
   const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(url.hostname);
-  
-  let targetDomain = isIP ? url.hostname : 
+
+  let targetDomain = isIP ? url.hostname :
     localIsEnabled ? url.hostname : domainParts.slice(-2).join(".");
 
-  // 检查白名单
-  if (whitelist.some(domain => targetDomain.includes(domain))) {
+  // 优化后的白名单检查：先用 Set 精确匹配，再检查包含关系
+  if (whitelistSet && whitelistSet.has(targetDomain)) {
     return null;
+  }
+
+  // 对于包含关系检查，仍需遍历但使用 Set
+  if (whitelistSet) {
+    for (const whitelistedDomain of whitelistSet) {
+      if (targetDomain.includes(whitelistedDomain) ||
+          whitelistedDomain.includes(targetDomain)) {
+        return null;
+      }
+    }
   }
 
   let groupName = targetDomain;
@@ -621,7 +728,7 @@ function determineGroupInfo(url, tab, options) {
     if (!options.enableNewtabGrouping) {
       return null;
     }
-    
+
     // 如果开启了新标签页分组，但白名单中包含 "newtab"，也不分组
     if (extensionWhitelist && extensionWhitelist.includes('newtab')) {
       return null;
@@ -631,12 +738,12 @@ function determineGroupInfo(url, tab, options) {
   // 处理扩展页面
   if (url.protocol.includes('extension')) {
     const extensionId = url.hostname;
-    
+
     // 检查扩展白名单（优先检查，独立于 extensionReplace 设置）
     if (extensionWhitelist && extensionWhitelist.includes(extensionId)) {
       return null;
     }
-    
+
     // 如果启用了扩展名称替换，使用扩展名称
     if (extensionReplace) {
       groupName = extensionReplaceMap[extensionId] || extensionId;
@@ -659,12 +766,9 @@ function determineGroupInfo(url, tab, options) {
     }
   }
 
-  // 应用自定义分组名称
-  for (const [customGroupName, domains] of Object.entries(groupNames)) {
-    if (domains.includes(targetDomain)) {
-      groupName = customGroupName;
-      break;
-    }
+  // 优化后的自定义分组名称查找：使用 Map O(1) 查找
+  if (domainToGroupName && domainToGroupName.has(targetDomain)) {
+    groupName = domainToGroupName.get(targetDomain);
   }
 
   groupName = processDomainName(groupName);
@@ -710,17 +814,24 @@ function processDomainName(groupName) {
 }
 
 /**
- * 更新标签组
+ * 更新标签组（优化版）
  * @param {Object} groups - 分组对象
  * @param {Object} existingGroupsMap - 现有分组映射
  * @param {number} windowId - 窗口ID
  * @param {string} sortMode - 排序模式
  */
 async function updateTabGroups(groups, existingGroupsMap, windowId, sortMode = 'default') {
+  const updateExistingPromises = [];
+  const createNewTasks = [];
+  const ungroupPromises = [];
+
   for (const [groupName, groupTabs] of Object.entries(groups)) {
     if (groupTabs.length <= 1) {
+      // 单个标签不分组，收集 ungroup 操作
       if (groupTabs.length === 1) {
-        await chrome.tabs.ungroup(groupTabs[0].id).catch(console.error);
+        ungroupPromises.push(
+          chrome.tabs.ungroup(groupTabs[0].id).catch(console.error)
+        );
       }
       continue;
     }
@@ -728,54 +839,60 @@ async function updateTabGroups(groups, existingGroupsMap, windowId, sortMode = '
     const tabIds = groupTabs.map(tab => tab.id);
 
     if (existingGroupsMap[groupName]) {
-      // 更新现有分组
-      await chrome.tabs.group({
-        tabIds,
-        groupId: existingGroupsMap[groupName]
-      }).catch(console.error);
+      // 更新现有分组 - 可以并行
+      updateExistingPromises.push(
+        chrome.tabs.group({
+          tabIds,
+          groupId: existingGroupsMap[groupName]
+        }).catch(console.error)
+      );
     } else {
-      // 创建新分组
-      // 【关键修复】：显式指定 createProperties: { windowId }
-      // 这强制浏览器在指定窗口创建新组，而不是合并到其他窗口的同名组
+      // 创建新分组 - 需要串行（因为后续操作依赖 groupId）
+      createNewTasks.push({ groupName, tabIds, windowId, sortMode });
+    }
+  }
+
+  // 并行执行：ungroup 和 更新现有分组
+  await Promise.all([...ungroupPromises, ...updateExistingPromises]);
+
+  // 串行执行：创建新分组（Chrome API 限制，并行创建可能冲突）
+  for (const task of createNewTasks) {
+    try {
       const groupId = await chrome.tabs.group({
-        tabIds,
-        createProperties: { windowId: windowId }
-      }).catch(console.error);
+        tabIds: task.tabIds,
+        createProperties: { windowId: task.windowId }
+      });
 
       if (groupId) {
-        await chrome.tabGroups.update(groupId, { title: groupName }).catch(console.error);
+        await chrome.tabGroups.update(groupId, { title: task.groupName });
 
-        // 追加模式：新创建的分组移动到最后
-        if (sortMode === 'append') {
-          await chrome.tabGroups.move(groupId, { index: -1 }).catch(console.error);
+        if (task.sortMode === 'append') {
+          await chrome.tabGroups.move(groupId, { index: -1 });
         }
       }
+    } catch (error) {
+      console.error(`创建分组 ${task.groupName} 失败:`, error);
     }
   }
 }
 
 /**
- * 重新排序标签页和分组，确保分组在固定标签页之后，未分组标签在最后
+ * 重新排序标签页和分组，确保分组在固定标签页之后，未分组标签在最后（优化版）
  * @param {number} windowId - 窗口ID
  * @param {string} sortMode - 排序模式: 'default' | 'name' | 'append'
+ * @param {boolean} groupTop - 是否分组在前
  * @returns {Promise<void>}
  */
-async function reorderTabsAndGroups(windowId, sortMode = 'default') {
+async function reorderTabsAndGroups(windowId, sortMode = 'default', groupTop = false) {
   try {
-    // 默认模式和追加模式不需要重新排序（追加模式在 updateTabGroups 中已处理）
-    if (sortMode === 'default' || sortMode === 'append') {
+    // 如果 groupTop 为 true，无论什么排序模式都需要执行分组在前的排序
+    // 只有当 groupTop 为 false 且排序模式不是 'name' 时才跳过
+    if (!groupTop && sortMode !== 'name') {
       return;
     }
 
-    // 使用传入的 windowId 而不是获取当前窗口
-    const window = await chrome.windows.get(windowId, { populate: true });
-
-    // 获取指定窗口的所有标签页
+    // 一次性获取所有标签页（包含 groupId 信息）
     const allTabs = await chrome.tabs.query({ windowId: windowId });
-
-    const pinnedTabsCount = allTabs.filter(tab => tab.pinned).length;
-
-    // 获取指定窗口的所有标签组
     const allGroups = await chrome.tabGroups.query({ windowId: windowId });
 
     // 名称排序：中文 > 英文 > 数字 > 其他
@@ -783,37 +900,46 @@ async function reorderTabsAndGroups(windowId, sortMode = 'default') {
       allGroups.sort((a, b) => compareGroupNames(a.title || '', b.title || ''));
     }
 
-    let currentIndex = pinnedTabsCount;
+    const pinnedTabsCount = allTabs.filter(tab => tab.pinned).length;
 
-    for (const group of allGroups) {
-      const groupTabs = await chrome.tabs.query({
-        windowId: windowId,
-        groupId: group.id,
-        pinned: false
-      });
-
-      if (groupTabs.length > 0) {
-        await chrome.tabGroups.move(group.id, { index: currentIndex });
-
-        for (const tab of groupTabs) {
-          await chrome.tabs.move(tab.id, { index: currentIndex });
-          currentIndex++;
+    // 预先构建分组到标签的映射（避免多次 query）
+    const groupTabsMap = new Map();
+    for (const tab of allTabs) {
+      if (!tab.pinned && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+        if (!groupTabsMap.has(tab.groupId)) {
+          groupTabsMap.set(tab.groupId, []);
         }
+        groupTabsMap.get(tab.groupId).push(tab);
       }
     }
 
-    const ungroupedTabs = await chrome.tabs.query({
-      windowId: windowId,
-      groupId: chrome.tabGroups.TAB_GROUP_ID_NONE,
-      pinned: false
-    });
+    let currentIndex = pinnedTabsCount;
 
-    const movePromises = ungroupedTabs.map(tab =>
-      chrome.tabs.move(tab.id, { index: -1 })
-        .catch(err => console.error(`移动未分组标签页 ${tab.id} 失败:`, err))
+    // 按顺序移动分组
+    for (const group of allGroups) {
+      const groupTabs = groupTabsMap.get(group.id) || [];
+
+      if (groupTabs.length > 0) {
+        // 移动分组本身
+        await chrome.tabGroups.move(group.id, { index: currentIndex });
+
+        // 批量移动标签（Chrome API 支持数组）
+        const tabIds = groupTabs.map(tab => tab.id);
+        await chrome.tabs.move(tabIds, { index: currentIndex });
+
+        currentIndex += groupTabs.length;
+      }
+    }
+
+    // 未分组标签批量移动到最后
+    const ungroupedTabs = allTabs.filter(
+      tab => !tab.pinned && tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE
     );
 
-    await Promise.all(movePromises);
+    if (ungroupedTabs.length > 0) {
+      const ungroupedTabIds = ungroupedTabs.map(tab => tab.id);
+      await chrome.tabs.move(ungroupedTabIds, { index: -1 }).catch(console.error);
+    }
 
     console.log('标签页排序完成');
   } catch (error) {

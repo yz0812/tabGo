@@ -48,6 +48,33 @@
             font-size: 13px;
             color: #333;
         }
+        .section-title {
+            cursor: pointer;
+            user-select: none;
+        }
+        .section-title:hover {
+            color: #666;
+        }
+        .section-arrow {
+            width: 12px;
+            height: 12px;
+            margin-left: 4px;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .section-arrow.collapsed {
+            transform: rotate(-90deg);
+        }
+        .section-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 1;
+        }
+        .section-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
     </style>
 </head>
 <body class="w-[260px] m-0 bg-gray-50 text-gray-800">
@@ -63,12 +90,16 @@
         </button>
 
         <!-- 管理菜单 -->
-        <div class="section-title flex items-center">
+        <div class="section-title flex items-center" id="manageToggle">
             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
             管理
+            <svg class="section-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
         </div>
+        <div class="section-content" id="manageContent">
         <a href="../pages/whitelist.html" class="menu-item">
             <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -87,15 +118,20 @@
             </svg>
             <span>扩展白名单</span>
         </a>
+        </div>
 
         <!-- 设置 -->
-        <div class="section-title flex items-center">
+        <div class="section-title flex items-center" id="settingsToggle">
             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>
             设置
+            <svg class="section-arrow collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
         </div>
+        <div class="section-content collapsed" id="settingsContent">
         <div class="toggle-row">
             <span class="toggle-label flex items-center">
                 <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,14 +217,19 @@
                 <div class="relative w-10 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
             </label>
         </div>
+        </div>
 
         <!-- 数据管理 -->
-        <div class="section-title flex items-center">
+        <div class="section-title flex items-center" id="dataToggle">
             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
             </svg>
             数据
+            <svg class="section-arrow collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
         </div>
+        <div class="section-content collapsed" id="dataContent">
         <div class="flex gap-2">
             <button id="exportButton" class="menu-item flex-1 justify-center m-0">
                 <svg class="menu-icon mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,6 +245,7 @@
             </button>
         </div>
         <input type="file" id="importFile" accept=".json" class="hidden" />
+        </div>
     </div>
     <script src="popup.js"></script>
 </body>
