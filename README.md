@@ -163,8 +163,8 @@ tabGo/
 
 ## 📸 截图
 
-![img.png](img/img.png)
-![img.png](img/img2.png)
+![img.png](assets/images/img.png)
+![img.png](assets/images/img2.png)
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
