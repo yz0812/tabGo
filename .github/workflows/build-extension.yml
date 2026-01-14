@@ -29,16 +29,14 @@ jobs:
 
           # 复制需要的文件和目录
           cp manifest.json build/tabgo/
-          cp -r background build/tabgo/
-          cp -r content build/tabgo/
-          cp -r popup build/tabgo/
-          cp -r options build/tabgo/
-          cp -r pages build/tabgo/
+          cp -r src build/tabgo/
           cp -r assets build/tabgo/
 
           # 显示打包内容
           echo "=== Build contents ==="
           ls -la build/tabgo/
+          echo "=== Src structure ==="
+          find build/tabgo/src -type d
           echo "=== Assets structure ==="
           find build/tabgo/assets -type f
 
