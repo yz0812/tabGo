@@ -640,7 +640,7 @@ async function groupTabs(targetWindowId = null) {
  * @returns {Object} 分组结果
  */
 function processAndGroupTabs(tabs, existingGroups, options) {
-  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace, extensionWhitelist, enableNewtabGrouping } = options;
+  const { localIsEnabled, whitelist, groupNames, extensionReplaceMap, extensionReplace, extensionWhitelist, enableNewtabGrouping, whitelistSet, domainToGroupName } = options;
   const groups = {};
   const existingGroupsMap = {};
 
@@ -661,7 +661,9 @@ function processAndGroupTabs(tabs, existingGroups, options) {
         extensionReplaceMap,
         extensionReplace,
         extensionWhitelist,
-        enableNewtabGrouping
+        enableNewtabGrouping,
+        whitelistSet,
+        domainToGroupName
       });
 
       if (groupInfo) {
