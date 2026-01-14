@@ -26,7 +26,28 @@
             align-items: center;
             margin-bottom: 24px;
         }
-        
+
+        .back-button {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 12px;
+            text-decoration: none;
+            color: #666;
+        }
+
+        .back-button:hover {
+            background: #e5e7eb;
+            color: #333;
+            transform: translateX(-2px);
+        }
+
         .header-icon {
             width: 32px;
             height: 32px;
@@ -157,6 +178,11 @@
     <div class="container">
         <!-- 标题 -->
         <div class="header">
+            <a href="../popup/popup.html" class="back-button" title="返回">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </a>
             <svg class="header-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>

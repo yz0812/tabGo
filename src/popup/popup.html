@@ -59,21 +59,25 @@
             width: 12px;
             height: 12px;
             margin-left: 4px;
-            transition: transform 0.2s;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
         }
         .section-arrow.collapsed {
             transform: rotate(-90deg);
         }
         .section-content {
-            max-height: 1000px;
+            max-height: 800px;
             overflow: hidden;
-            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 1;
         }
         .section-content.collapsed {
             max-height: 0;
             opacity: 0;
+            padding-top: 0;
+            padding-bottom: 0;
         }
     </style>
 </head>
@@ -95,11 +99,11 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
             管理
-            <svg class="section-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="section-arrow collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </div>
-        <div class="section-content" id="manageContent">
+        <div class="section-content collapsed" id="manageContent">
         <a href="../pages/whitelist.html" class="menu-item">
             <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>

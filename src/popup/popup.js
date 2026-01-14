@@ -33,7 +33,7 @@ function setupCollapsible(toggleId, contentId, storageKey, defaultExpanded = fal
 
 // 初始化折叠功能
 document.addEventListener("DOMContentLoaded", () => {
-  setupCollapsible('manageToggle', 'manageContent', 'manageCollapsed', true); // 默认展开
+  setupCollapsible('manageToggle', 'manageContent', 'manageCollapsed', false); // 默认折叠
   setupCollapsible('settingsToggle', 'settingsContent', 'settingsCollapsed', false); // 默认折叠
   setupCollapsible('dataToggle', 'dataContent', 'dataCollapsed', false); // 默认折叠
 });

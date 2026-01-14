@@ -25,6 +25,46 @@
             flex-direction: column;
             overflow: hidden;
         }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .back-button {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 12px;
+            text-decoration: none;
+            color: #666;
+        }
+
+        .back-button:hover {
+            background: #e5e7eb;
+            color: #333;
+            transform: translateX(-2px);
+        }
+
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 12px;
+            color: #3b82f6;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+        }
         
         .extensions-grid {
             display: grid;
@@ -163,7 +203,18 @@
 </head>
 <body>
     <div class="extensions-container">
-        <!-- <h1 style="font-size: 24px; font-weight: bold; color: #1976d2; margin-bottom: 16px;">扩展分组白名单</h1> -->
+        <!-- 标题 -->
+        <div class="header">
+            <a href="../popup/popup.html" class="back-button" title="返回">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </a>
+            <svg class="header-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            <h1 class="header-title">扩展分组白名单</h1>
+        </div>
 
         <!-- 统计信息 -->
         <div class="stats-bar">
