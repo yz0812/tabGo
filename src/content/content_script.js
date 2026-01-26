@@ -16,19 +16,46 @@ class TabSearchUI {
     this.tabs = [];
     this.filteredTabs = [];
     this.selectedIndex = 0;
-    this.lastShiftTime = 0;
+    this.lastKey = null;
+    this.lastTapTime = 0;
+    this.searchEnabled = true; // Default true
+    this.triggerKey = 'Shift'; // Default Shift
     this.fallbackFaviconDataUrl = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHJlY3Qgd2lkdGg9IjEyIiBoZWlnaHQ9IjE0IiB4PSIyIiB5PSIxIiBmaWxsPSIjZTVlN2ViIiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMSIvPjxsaW5lIHgxPSI0IiB5MT0iNSIgeDI9IjEyIiB5Mj0iNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjEiLz48bGluZSB4MT0iNCIgeTE9IjgiIHgyPSIxMiIgeTI9IjgiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+';
 
     // Bind methods
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleGlobalKeyDown = this.handleGlobalKeyDown.bind(this);
     this.close = this.close.bind(this);
+    this.loadSettings = this.loadSettings.bind(this);
 
     this.init();
   }
 
   init() {
+    this.loadSettings();
     document.addEventListener('keydown', this.handleGlobalKeyDown);
+
+    // Listen for storage changes to update settings dynamically
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local') {
+            if (changes.enableTabSearch) {
+                this.searchEnabled = changes.enableTabSearch.newValue;
+                console.log('[TabGo] Search Enabled updated:', this.searchEnabled);
+            }
+            if (changes.tabSearchKey) {
+                this.triggerKey = changes.tabSearchKey.newValue;
+                console.log('[TabGo] Trigger Key updated:', this.triggerKey);
+            }
+        }
+    });
+  }
+
+  loadSettings() {
+      chrome.storage.local.get(['enableTabSearch', 'tabSearchKey'], (result) => {
+          this.searchEnabled = result.enableTabSearch !== undefined ? result.enableTabSearch : true;
+          this.triggerKey = result.tabSearchKey || 'Shift';
+          console.log('[TabGo] Settings loaded:', { enabled: this.searchEnabled, key: this.triggerKey });
+      });
   }
 
   isEditableTarget(target) {
@@ -65,16 +92,106 @@ class TabSearchUI {
   }
 
   handleGlobalKeyDown(e) {
+    // Debug log
+    // console.log('[TabGo] KeyDown:', e.key, 'Code:', e.code, 'Trigger:', this.triggerKey);
+
+    if (!this.searchEnabled) return;
+    if (this.isVisible) return; // Don't trigger if already visible (let input handle it)
     if (e.isComposing || this.isEditableTarget(e.target)) return;
-    if (e.key === 'Shift' && !e.repeat && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      const now = Date.now();
-      if (now - this.lastShiftTime <= 500) {
-        this.toggle();
-        this.lastShiftTime = 0;
-      } else {
-        this.lastShiftTime = now;
-      }
+
+    // --- 1. Check Combo Keys (Stateless) ---
+    // Only if the configured key is a combo (contains '+')
+    if (this.triggerKey.includes('+')) {
+        const parts = this.triggerKey.split('+');
+        const mainKey = parts.pop(); // Last part is the key code
+        const modifiers = parts;
+
+        const needsCtrl = modifiers.some(m => m === 'Ctrl' || m === 'Control');
+        const needsAlt = modifiers.some(m => m === 'Alt');
+        const needsShift = modifiers.some(m => m === 'Shift');
+        const needsMeta = modifiers.some(m => m === 'Meta' || m === 'Command');
+
+        // console.log('[TabGo] Checking Combo:', { mainKey, needsCtrl, needsAlt, needsShift });
+
+        if (e.ctrlKey === needsCtrl &&
+            e.altKey === needsAlt &&
+            e.shiftKey === needsShift &&
+            e.metaKey === needsMeta) {
+
+            let pressedKey = e.key;
+            if (pressedKey === ' ') pressedKey = 'Space';
+
+            if (pressedKey.toLowerCase() === mainKey.toLowerCase()) {
+                 console.log('[TabGo] Combo Matched!');
+                 e.preventDefault();
+                 this.toggle();
+                 return;
+            }
+        }
     }
+
+    // --- 2. Check Double Tap Keys (Stateful) ---
+    // We strictly follow the configured key. No hardcoded 'Shift'.
+    const keysToWatch = new Set();
+
+    // If configured key is a single modifier (not a combo), add it
+    if (!this.triggerKey.includes('+')) {
+        let configKey = this.triggerKey.replace('Double ', '');
+        keysToWatch.add(configKey);
+    }
+
+    // console.log('[TabGo] Keys to watch:', Array.from(keysToWatch));
+
+    if (keysToWatch.has(e.key) && !e.repeat) {
+        // Ensure only the target modifier is pressed
+        const isCtrl = e.ctrlKey;
+        const isAlt = e.altKey;
+        const isMeta = e.metaKey;
+        const isShift = e.shiftKey;
+
+        // Check if "pure" (no other modifiers are pressed)
+        let isPure = true;
+
+        if (e.key === 'Shift' && (isCtrl || isAlt || isMeta)) isPure = false;
+        else if (e.key === 'Control' && (isAlt || isMeta || isShift)) isPure = false;
+        else if (e.key === 'Alt' && (isCtrl || isMeta || isShift)) isPure = false;
+        // For strictness, if the key is not one of the standard modifiers we expect, treat as impure if any modifier is held
+        else if (!['Shift', 'Control', 'Alt'].includes(e.key) && (isCtrl || isAlt || isMeta || isShift)) isPure = false;
+
+        // console.log('[TabGo] Is Pure?', isPure, 'Key:', e.key);
+
+        if (isPure) {
+            const now = Date.now();
+            const timeDiff = now - this.lastTapTime;
+
+            // console.log('[TabGo] Tap Check:', { lastKey: this.lastKey, currentKey: e.key, timeDiff });
+
+            // Reset if time gap is too large
+            if (timeDiff > 500) {
+                 this.lastKey = e.key;
+                 this.lastTapTime = now;
+                 return;
+            }
+
+            // Check if it's the second tap of the SAME key
+            if (this.lastKey === e.key) {
+                console.log('[TabGo] Double Tap Detected! Toggling UI...');
+                this.toggle();
+                this.lastKey = null;
+                this.lastTapTime = 0;
+            } else {
+                // Different key pressed, restart sequence
+                this.lastKey = e.key;
+                this.lastTapTime = now;
+            }
+            return;
+        }
+    }
+
+    // Reset double tap state if any other key is pressed
+    // console.log('[TabGo] Resetting tap state due to other key');
+    this.lastKey = null;
+    this.lastTapTime = 0;
   }
 
   async toggle() {
@@ -294,7 +411,12 @@ class TabSearchUI {
 
     // Close on click outside
     this.host.addEventListener('click', (e) => {
-      if (e.target === this.host) this.close();
+      const path = e.composedPath();
+      // 如果点击的是 host 本身（背景遮罩），则关闭
+      // 如果点击的是内部元素（如 input, list），path[0] 会是内部元素，不等于 host
+      if (path && path[0] === this.host) {
+        this.close();
+      }
     });
 
     document.body.appendChild(this.host);

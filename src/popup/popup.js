@@ -242,3 +242,88 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+  const toggle = document.getElementById("enableTabSearch");
+  const input = document.getElementById("tabSearchKey");
+  const keyRow = document.getElementById("tabSearchKeyRow");
+
+  // 初始化显示状态
+  function updateVisibility(enabled) {
+      if (enabled) {
+          keyRow.style.display = 'flex';
+      } else {
+          keyRow.style.display = 'none';
+      }
+  }
+
+  // 读取配置
+  chrome.storage.local.get(["enableTabSearch", "tabSearchKey"], function (result) {
+    // 默认为开启
+    const enabled = result.enableTabSearch !== undefined ? result.enableTabSearch : true;
+    toggle.checked = enabled;
+
+    // 默认键位 Shift
+    if (result.tabSearchKey) {
+        input.value = result.tabSearchKey;
+    } else {
+        input.value = "Shift";
+    }
+
+    updateVisibility(enabled);
+  });
+
+  // 监听开关
+  toggle.addEventListener("change", function () {
+    const enabled = toggle.checked;
+    updateVisibility(enabled);
+    chrome.storage.local.set({ enableTabSearch: enabled });
+  });
+
+  // 监听按键录制
+  input.addEventListener("keydown", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const key = e.key;
+
+    // 处理单个修饰键 (用于双击触发)
+    if (["Control", "Alt", "Shift", "Meta"].includes(key)) {
+        input.value = key;
+        chrome.storage.local.set({ tabSearchKey: key });
+        return;
+    }
+
+    // 处理组合键
+    const modifiers = [];
+    if (e.ctrlKey) modifiers.push("Ctrl");
+    if (e.altKey) modifiers.push("Alt");
+    if (e.shiftKey) modifiers.push("Shift");
+    if (e.metaKey) modifiers.push("Meta");
+
+    let keyName = key.length === 1 ? key.toUpperCase() : key;
+    if (key === " ") keyName = "Space";
+
+    // 如果是 Escape，可以清除设置? 或者不处理?
+    // 这里暂时不做清除逻辑，Escape 用于关闭 UI
+
+    let shortcut = keyName;
+    if (modifiers.length > 0) {
+        shortcut = modifiers.join("+") + "+" + keyName;
+    }
+
+    input.value = shortcut;
+    chrome.storage.local.set({ tabSearchKey: shortcut });
+  });
+
+  // 聚焦样式
+  input.addEventListener("focus", function() {
+      input.classList.add("ring-2", "ring-blue-500");
+      input.placeholder = "按下快捷键...";
+  });
+
+  input.addEventListener("blur", function() {
+      input.classList.remove("ring-2", "ring-blue-500");
+      if (!input.value) input.placeholder = "点击设置快捷键";
+  });
+});
+
