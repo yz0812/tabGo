@@ -25,7 +25,7 @@
 	],
 	
 	  "web_accessible_resources": [{
-		"resources": ["assets/data/domain.txt","assets/data/aliases.json"],
+		"resources": ["assets/data/domain.txt","assets/data/aliases.json", "src/content/search_ui.html"],
 		"matches": ["<all_urls>"]
 	  }],
 	"host_permissions": ["*://*/*"]

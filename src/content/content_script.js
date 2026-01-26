@@ -207,7 +207,7 @@ class TabSearchUI {
 
     // Create UI if not exists
     if (!this.host) {
-      this.createUI();
+      await this.createUI();
     }
 
     // Fetch tabs
@@ -243,183 +243,47 @@ class TabSearchUI {
     // document.body.style.overflow = '';
   }
 
-  createUI() {
+  async createUI() {
     this.host = document.createElement('div');
     this.host.id = 'tabgo-search-host';
     this.shadow = this.host.attachShadow({ mode: 'open' });
 
-    // Styles
-    const style = document.createElement('style');
-    style.textContent = `
-      :host {
-        all: initial;
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 2147483647;
-        background: rgba(0, 0, 0, 0.2);
-        font-family: system-ui, -apple-system, sans-serif;
-      }
-      .container {
-        position: absolute;
-        top: 20%;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 600px;
-        max-width: 90%;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        animation: fadeIn 0.1s ease-out;
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translate(-50%, -10px); }
-        to { opacity: 1; transform: translate(-50%, 0); }
-      }
-      .search-box {
-        padding: 16px;
-        border-bottom: 1px solid #e5e7eb;
-        display: flex;
-        align-items: center;
-      }
-      .search-icon {
-        width: 20px;
-        height: 20px;
-        color: #9ca3af;
-        margin-right: 12px;
-      }
-      input {
-        flex: 1;
-        font-size: 16px;
-        border: none;
-        outline: none;
-        background: transparent;
-        color: #111827;
-      }
-      .list {
-        max-height: 300px; /* Approx 5 items (60px each) */
-        overflow-y: auto;
-        padding: 8px 0;
-      }
-      .item {
-        padding: 10px 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        cursor: pointer;
-        transition: background-color 0.1s;
-      }
-      .item.selected {
-        background-color: #f3f4f6;
-      }
-      .item:hover {
-        background-color: #f9fafb;
-      }
-      .favicon {
-        width: 16px;
-        height: 16px;
-        flex-shrink: 0;
-        border-radius: 2px;
-      }
-      .content {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .title {
-        font-size: 14px;
-        font-weight: 500;
-        color: #111827;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .url {
-        font-size: 12px;
-        color: #6b7280;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .badge {
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        background-color: #e5e7eb;
-        color: #4b5563;
-        margin-left: 8px;
-        flex-shrink: 0;
-      }
-      /* Scrollbar */
-      .list::-webkit-scrollbar {
-        width: 8px;
-      }
-      .list::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      .list::-webkit-scrollbar-thumb {
-        background-color: #d1d5db;
-        border-radius: 4px;
-      }
-      .list::-webkit-scrollbar-thumb:hover {
-        background-color: #9ca3af;
-      }
-    `;
+    try {
+      const response = await fetch(chrome.runtime.getURL('src/content/search_ui.html'));
+      const html = await response.text();
+      this.shadow.innerHTML = html;
 
-    const container = document.createElement('div');
-    container.className = 'container';
+      // Re-attach event listeners
+      const input = this.shadow.querySelector('input');
+      const list = this.shadow.querySelector('.list');
 
-    const searchBox = document.createElement('div');
-    searchBox.className = 'search-box';
-
-    // Search Icon SVG
-    searchBox.innerHTML = `
-      <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-    `;
-
-    const input = document.createElement('input');
-    input.placeholder = 'Search tabs...';
-    input.addEventListener('input', (e) => this.handleInput(e.target.value));
-    input.addEventListener('keydown', this.handleKeyDown);
-
-    const list = document.createElement('div');
-    list.className = 'list';
-    list.addEventListener('click', (e) => {
-      const item = e.target.closest('.item');
-      if (item) {
-        const index = parseInt(item.dataset.index);
-        this.activateTab(this.filteredTabs[index]);
+      if (input) {
+        input.addEventListener('input', (e) => this.handleInput(e.target.value));
+        input.addEventListener('keydown', this.handleKeyDown);
       }
-    });
 
-    searchBox.appendChild(input);
-    container.appendChild(searchBox);
-    container.appendChild(list);
-
-    this.shadow.appendChild(style);
-    this.shadow.appendChild(container);
-
-    // Close on click outside
-    this.host.addEventListener('click', (e) => {
-      const path = e.composedPath();
-      // 如果点击的是 host 本身（背景遮罩），则关闭
-      // 如果点击的是内部元素（如 input, list），path[0] 会是内部元素，不等于 host
-      if (path && path[0] === this.host) {
-        this.close();
+      if (list) {
+        list.addEventListener('click', (e) => {
+          const item = e.target.closest('.item');
+          if (item) {
+            const index = parseInt(item.dataset.index);
+            this.activateTab(this.filteredTabs[index]);
+          }
+        });
       }
-    });
 
-    document.body.appendChild(this.host);
+      // Close on click outside
+      this.host.addEventListener('click', (e) => {
+        const path = e.composedPath();
+        if (path && path[0] === this.host) {
+          this.close();
+        }
+      });
+
+      document.body.appendChild(this.host);
+    } catch (err) {
+      console.error('Failed to load TabSearch UI:', err);
+    }
   }
 
   handleInput(query) {
