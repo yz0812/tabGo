@@ -24,3 +24,4 @@ Thumbs.db
 *.log
 *.tmp
 maven-index.sqlite
+.ace-tool/

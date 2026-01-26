@@ -16,6 +16,9 @@ chrome.runtime.onMessage.addListener(handleMessage);
 // 域名后缀
 let commonTLDs = [];
 
+// 最近访问的标签页ID列表 (MRU)
+let recentTabs = [];
+
 // 防抖状态管理
 const pendingGroupTabs = new Map(); // windowId -> timeoutId
 const DEBOUNCE_DELAY = 150; // 毫秒
@@ -154,19 +157,28 @@ function handleTabUpdate(tabId, changeInfo, tab) {
  * 处理标签页激活
  */
 function handleTabActivation(activeInfo) {
+  // 更新最近访问列表
+  recentTabs = recentTabs.filter(id => id !== activeInfo.tabId);
+  recentTabs.unshift(activeInfo.tabId);
+  // 保留最近 50 条记录
+  if (recentTabs.length > 50) recentTabs.pop();
+
   // activeInfo 包含 windowId
   chrome.tabs.get(activeInfo.tabId, tab => {
     // 同时也只处理当前窗口的折叠逻辑
     collapseOtherTabGroups(tab).catch(console.error);
   });
   // 激活通常不需要重新分组，除非你有特殊需求，如果需要也只处理当前窗口
-  // groupTabs(activeInfo.windowId); 
+  // groupTabs(activeInfo.windowId);
 }
 
 /**
  * 处理标签页移除
  */
 function handleTabRemoval(tabId, removeInfo) {
+  // 从最近访问列表中移除
+  recentTabs = recentTabs.filter(id => id !== tabId);
+
   if (!removeInfo.isWindowClosing) {
     // removeInfo 包含 windowId
     debouncedGroupTabs(removeInfo.windowId);
@@ -216,7 +228,53 @@ function handleMessage(message, sender, sendResponse) {
     groupTabs(targetWindowId).then(() => {
       sendResponse({ status: "Tabs grouped successfully" });
     });
-    return true; 
+    return true;
+  }
+
+  if (message.action === "getTabs") {
+    chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError) {
+        console.error('Failed to query tabs:', chrome.runtime.lastError);
+        sendResponse([]);
+        return;
+      }
+      // 根据 recentTabs 对 tabs 进行排序
+      const tabsMap = new Map(tabs.map(t => [t.id, t]));
+      const sortedTabs = [];
+
+      // 先添加最近访问的
+      for (const tabId of recentTabs) {
+        if (tabsMap.has(tabId)) {
+          sortedTabs.push(tabsMap.get(tabId));
+          tabsMap.delete(tabId);
+        }
+      }
+
+      // 添加剩余的
+      sortedTabs.push(...tabsMap.values());
+
+      sendResponse(sortedTabs);
+    });
+    return true;
+  }
+
+  if (message.action === "activateTab") {
+    const { tabId, windowId } = message;
+    if (typeof tabId !== 'number' || typeof windowId !== 'number') {
+      sendResponse({ status: "error", message: "Invalid tabId/windowId" });
+      return true;
+    }
+    (async () => {
+      try {
+        await chrome.windows.update(windowId, { focused: true });
+        await chrome.tabs.update(tabId, { active: true });
+        sendResponse({ status: "success" });
+      } catch (error) {
+        console.error('Failed to activate tab:', error);
+        sendResponse({ status: "error", message: error?.message || String(error) });
+      }
+    })();
+    return true;
   }
 }
 
