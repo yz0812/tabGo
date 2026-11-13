@@ -4,100 +4,72 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-TabGo 是一个 Chrome/Edge 浏览器标签页自动分组扩展，基于 Manifest V3，使用原生 JavaScript 开发（无构建工具）。
+TabGo 是一个 Chrome/Edge 浏览器标签页自动分组扩展，基于 Manifest V3，使用 [WXT](https://wxt.dev) + Vue 3 + TypeScript + Tailwind CSS v4 开发。manifest 由 `wxt.config.ts` 生成，不要手写 `manifest.json`。
 
 ## 开发命令
 
-### 本地打包
 ```bash
-# Windows
-build.bat
-
-# Linux/Mac
-chmod +x build.sh && ./build.sh
+npm install            # 安装依赖（postinstall 会执行 wxt prepare 生成 .wxt/ 类型）
+npm run dev            # 开发模式，自动打开 Chrome 并热更新
+npm run dev:edge       # Edge 开发模式
+npm run compile        # vue-tsc 类型检查（提交前必须通过）
+npm run build          # 构建到 .output/chrome-mv3
+npm run build:edge     # 构建到 .output/edge-mv3
+npm run zip            # 打包 .output/tabgo-<version>-chrome.zip
+npm run zip:edge       # 打包 .output/tabgo-<version>-edge.zip
 ```
 
 ### 发布新版本
 ```bash
-# 1. 更新 manifest.json 中的版本号
-# 2. 提交并推送
-git add manifest.json && git commit -m "Bump version to x.x.x" && git push
-
-# 3. 创建 tag 触发 GitHub Actions 自动构建
+# 1. 更新 package.json 中的 version（manifest 版本取自这里）
+git add package.json && git commit -m "Bump version to x.x.x" && git push
+# 2. 创建 tag 触发 GitHub Actions：类型检查 + 打包 Chrome/Edge zip + 发布 Release
 git tag vx.x.x && git push origin vx.x.x
 ```
 
-### 开发模式安装
-1. 打开 `chrome://extensions/` 或 `edge://extensions/`
-2. 开启"开发者模式"
-3. 点击"加载已解压的扩展程序"，选择项目根目录
-
 ## 架构
 
-### 运行环境
-- **Background (Service Worker)**: `src/background/background.js` - 核心分组逻辑，无 DOM 访问
-- **Content Script**: `src/content/content_script.js` - 注入页面，处理右键菜单交互
-- **Popup**: `src/popup/` - 扩展弹出窗口，设置开关和导入导出
-- **Pages**: `src/pages/` - 白名单、分组别名、扩展白名单管理页面
+### 入口（src/entrypoints/）
+- **background.ts**：Service Worker，分组调度、右键菜单、快捷键命令、消息处理，无 DOM 访问
+- **content/**：页面内标签搜索浮层。**刻意使用原生 TS + closed Shadow DOM，不要引入 Vue**，以保证注入到每个网页的体积最小；CSS 通过 `?inline` 导入
+- **popup/**：精简弹窗（Vue），当前网站状态、改分组名、白名单、窗口操作
+- **options/**：全屏控制台（Vue），hash 路由：`/overview` `/rules` `/whitelist` `/extensions` `/settings` `/data`；`/rules?domain=xxx` 会预填域名
 
-### 数据存储
+### 共享代码
+- `src/utils/settings.ts`：存储键、默认值、`loadSettings` / `saveSettings` / `updateSetting`
+- `src/utils/grouping.ts`：`resolveGroup(url, ctx)` 纯函数，决定标签所属分组（UI 与后台共用）
+- `src/utils/domain.ts`：根域名（处理 com.cn、co.uk）、规则后缀匹配、名称简化（内置 TLD 列表）
+- `src/utils/colors.ts`：分组颜色（单独拆出，避免 content script 打包 TLD 列表）
+- `src/utils/messages.ts`：类型化消息协议 `MessageMap`
+- `src/composables/`：`useSettings`（与 storage 双向同步的单例）、`useBrowserTabs`（实时标签/分组）
 
-**chrome.storage.sync** (跨设备同步):
-- `whitelist`: 域名白名单数组
-- `groupNames`: 自定义分组名称映射 `{ "分组名": ["domain1", "domain2"] }`
-- `extensionWhitelist`: 扩展白名单数组（不参与分组的扩展 ID）
+### 数据存储（键名与 2.x 兼容）
 
-**chrome.storage.local** (本地设置):
-- `subdomainEnabled`: 是否按完整子域名分组
-- `groupTop`: 分组标签页是否置顶
-- `accordion`: 手风琴模式（激活分组时折叠其他）
-- `extensionReplace`: 是否用扩展名称替换扩展 ID
-- `extensionReplaceMap`: 扩展 ID 到名称的映射
-- `clearGroupedTabs`: 启动时是否关闭分组标签
-- `enableNewtabGrouping`: 是否对新标签页进行分组
+**chrome.storage.sync**：
+- `whitelist`: 域名白名单数组（后缀匹配，`a.com` 匹配 `x.a.com`，不匹配 `aa.com`）
+- `groupNames`: 自定义分组 `{ "分组名": ["domain1", "domain2"] }`，同一域名只属于一个分组
+- `extensionWhitelist`: 不参与分组的扩展 ID，特殊值 `newtab` 表示新标签页
+
+**chrome.storage.local**：`subdomainEnabled`、`groupTop`、`groupSortMode`（default/name/append）、`accordion`、`extensionReplace`、`clearGroupedTabs`、`enableNewtabGrouping`、`enableTabSearch`、`tabSearchKey`、`minGroupSize`
+
+**chrome.storage.session**（Service Worker 休眠后仍保留）：`recentTabs`（标签搜索 MRU 顺序）、`managedGroupIds`（TabGo 创建的分组，只有这些会被自动拆分）
 
 ### 消息通信
+- 页面 → 后台：`sendMessage(action, payload)`（`src/utils/messages.ts`），action：`quickGroup` `windowAction` `getTabs` `activateTab` `closeTab` `resolveUrl`
+- 后台 → content script：`{ action: 'toggleTabSearch' }`
 
-Background ↔ Content Script 通信使用 `chrome.runtime.sendMessage` / `chrome.runtime.onMessage`：
-- `quickGroup`: 触发快速分组
-- `promptForGroupName`: 弹出输入框设置分组名称
-
-### 核心分组流程 (background.js)
-
-1. `groupTabs(windowId)` - 入口，按窗口处理
-2. `processAndGroupTabs()` - 遍历标签页，调用 `determineGroupInfo()` 决定分组
-3. `determineGroupInfo()` - 检查白名单、特殊页面、扩展页面、自定义分组名
-4. `updateTabGroups()` - 创建/更新标签组
-5. `reorderTabsAndGroups()` - 可选的分组置顶排序
-
-### 静态资源 (assets/)
-- `data/domain.txt`: 常见顶级域名列表，用于简化分组名称
-- `data/aliases.json`: Chrome/Edge 特殊页面别名映射
-- `icons/`: 扩展图标
-- `lib/tailwindcss.3.4.16.js`: Tailwind CSS（仅 UI 页面使用）
-- `images/`: 其他图片资源
-
-## 权限说明
-
-```json
-{
-  "permissions": ["tabs", "storage", "tabGroups", "contextMenus", "management"],
-  "host_permissions": ["*://*/*"]
-}
-```
-
-- `tabs` + `tabGroups`: 标签页分组核心功能
-- `storage`: 配置持久化
-- `contextMenus`: 右键菜单
-- `management`: 获取已安装扩展列表（用于扩展名称替换）
+### 核心分组流程（background.ts）
+1. 标签/设置事件 → `scheduleGroup(windowId)`：按窗口防抖 150ms，`runExclusive` 串行执行
+2. `groupWindow()`：跳过固定标签，用 `resolveGroup()` 计算目标分组，应用 `minGroupSize`
+3. 只对需要变化的标签调用 `tabs.group` / `tabs.ungroup`；不拆分用户手动创建的分组
+4. `reorderWindow()`：仅在顺序不符合预期时移动分组
 
 ## 注意事项
 
-- 这是一个纯静态扩展项目，无需 npm/yarn 安装依赖
-- 修改后直接在浏览器扩展页面点击刷新按钮即可生效
-- Service Worker 闲置 30 秒后会休眠，消息发送需处理 `chrome.runtime.lastError`
+- Service Worker 的监听器必须在 `defineBackground` 内同步注册；内存状态会随休眠丢失，需持久化的放 `storage.session`
+- 拖动标签时浏览器会报 "cannot be edited"，分组逻辑已有重试，不要去掉
 - 多窗口场景：分组操作需指定 `windowId`，避免跨窗口合并同名分组
-
+- 快捷键（`commands`）没有默认按键，用户在 `chrome://extensions/shortcuts` / `edge://extensions/shortcuts` 中设置
 
 ### 文件读取策略
 

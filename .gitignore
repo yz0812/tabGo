@@ -25,3 +25,8 @@ Thumbs.db
 *.tmp
 maven-index.sqlite
 .ace-tool/
+
+# WXT
+.output/
+.wxt/
+web-ext.config.ts

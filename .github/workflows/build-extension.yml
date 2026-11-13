@@ -16,73 +16,63 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get version from manifest
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get version
         id: version
         run: |
-          VERSION=$(grep -oP '"version":\s*"\K[^"]+' manifest.json)
+          VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extension version: $VERSION"
 
-      - name: Prepare build directory
+      - name: Type check
+        run: npm run compile
+
+      - name: Build and zip (Chrome & Edge)
         run: |
-          mkdir -p build/tabgo
-
-          # 复制需要的文件和目录
-          cp manifest.json build/tabgo/
-          cp -r src build/tabgo/
-          cp -r assets build/tabgo/
-
-          # 显示打包内容
-          echo "=== Build contents ==="
-          ls -la build/tabgo/
-          echo "=== Src structure ==="
-          find build/tabgo/src -type d
-          echo "=== Assets structure ==="
-          find build/tabgo/assets -type f
-
-      - name: Create ZIP package
-        run: |
-          cd build
-          zip -r ../tabgo-${{ steps.version.outputs.version }}.zip tabgo/
-          cd ..
-
-          # 显示打包结果
-          echo "=== Package created ==="
-          ls -lh tabgo-*.zip
-          unzip -l tabgo-*.zip | head -20
+          npm run zip
+          npm run zip:edge
+          ls -lh .output/*.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: tabgo-extension
-          path: tabgo-*.zip
+          path: .output/*.zip
           retention-days: 30
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: tabgo-*.zip
+          files: .output/*.zip
           body: |
             ## TabGo v${{ steps.version.outputs.version }}
 
             ### ⚠️ 重要提示
 
-            **请下载下方的 `tabgo-${{ steps.version.outputs.version }}.zip` 文件！**
+            **请下载下方的 `tabgo-${{ steps.version.outputs.version }}-chrome.zip`（Chrome）或 `-edge.zip`（Edge）文件！**
 
             ❌ **不要下载** "Source code (zip)" 或 "Source code (tar.gz)"，这些是完整的源代码仓库，包含开发文件，不能直接使用！
 
-            ✅ **正确的文件**：`tabgo-${{ steps.version.outputs.version }}.zip`（约 1-2 MB）
+            ✅ **正确的文件**：`tabgo-${{ steps.version.outputs.version }}-chrome.zip` / `tabgo-${{ steps.version.outputs.version }}-edge.zip`
 
             ---
 
             ### 📦 安装方法
-            1. 下载上方的 **`tabgo-${{ steps.version.outputs.version }}.zip`** 文件
+            1. 下载与浏览器对应的 zip 文件
             2. 解压到本地目录
-            3. 打开 Chrome 浏览器，访问 `chrome://extensions/`
+            3. 打开 `chrome://extensions/` 或 `edge://extensions/`
             4. 开启右上角的"开发者模式"
             5. 点击"加载已解压的扩展程序"
-            6. 选择解压后的 `tabgo` 目录
+            6. 选择解压后的目录
 
             ### ✨ 功能特性
             - 🔄 自动标签页分组
