@@ -46,6 +46,7 @@ jobs:
         with:
           name: tabgo-extension
           path: .output/*.zip
+          include-hidden-files: true
           retention-days: 30
 
       - name: Create Release
